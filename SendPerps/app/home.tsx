@@ -17,14 +17,99 @@ import { spacing, fontSize, borderRadius } from "../constants/spacing";
 import { haptics } from "../utils/haptics";
 import { PerpsCard } from "../components/PerpsCard";
 import { BottomNavigation } from "../components/BottomNavigation";
-import { mockPerpsData, PerpsData } from "../data/mockData";
-
+import { hyperliquidService, PerpsData } from "../services/HyperliquidService";
 
 export default function HomeScreen() {
   const { user, logout, isReady } = usePrivy();
   const [selectedFilter, setSelectedFilter] = useState<"Volume" | "24h">(
     "Volume"
   );
+  const [perpsData, setPerpsData] = useState<PerpsData[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+
+  // load real Hyperliquid data when user connects
+  React.useEffect(() => {
+    const loadRealData = async () => {
+      console.log("[HomeScreen] loadRealData called, user:", !!user);
+
+      if (user) {
+        console.log("[HomeScreen] User found, starting data load...");
+        console.log(
+          "[HomeScreen] User linked accounts:",
+          user.linked_accounts?.length
+        );
+
+        setLoadingData(true);
+        try {
+          // get wallet address from linked accounts
+          const walletAccount = user.linked_accounts?.find(
+            (account) =>
+              (account.type === "wallet" || account.type === "smart_wallet") &&
+              "address" in account
+          ) as { address: string; wallet_client_type?: string } | undefined;
+
+          console.log(
+            "[HomeScreen] Wallet account found:",
+            !!walletAccount?.address
+          );
+          console.log(
+            "[HomeScreen] Wallet address:",
+            walletAccount?.address?.substring(0, 10) + "..."
+          );
+
+          if (walletAccount?.address) {
+            // initialize wallet with Privy
+            const embeddedWallet = user.linked_accounts?.find(
+              (account) =>
+                account.type === "wallet" &&
+                account.wallet_client_type === "privy"
+            );
+
+            console.log(
+              "[HomeScreen] Embedded wallet found:",
+              !!embeddedWallet
+            );
+            console.log("[HomeScreen] Initializing HyperliquidService...");
+
+            hyperliquidService.initializeWallet(walletAccount.address);
+
+            console.log("[HomeScreen] Fetching real perps data...");
+            // load real perps data
+            const realPerpsData = await hyperliquidService.getPerpsData();
+            console.log("[HomeScreen] Real perps data received:", {
+              length: realPerpsData.length,
+              firstItem: realPerpsData[0]?.symbol,
+            });
+
+            if (realPerpsData.length > 0) {
+              console.log("[HomeScreen] Setting real perps data to state");
+              setPerpsData(realPerpsData);
+            } else {
+              console.log("[HomeScreen] No real perps data, keeping mock data");
+            }
+          } else {
+            console.log("[HomeScreen] No wallet address found");
+          }
+        } catch (error) {
+          console.error("[HomeScreen] Failed to load real data:", error);
+          console.error("[HomeScreen] Error details:", {
+            message: error instanceof Error ? error.message : "Unknown error",
+            stack:
+              error instanceof Error
+                ? error.stack?.substring(0, 200)
+                : undefined,
+          });
+        } finally {
+          console.log("[HomeScreen] Setting loadingData to false");
+          setLoadingData(false);
+        }
+      } else {
+        console.log("[HomeScreen] No user found, skipping data load");
+      }
+    };
+
+    loadRealData();
+  }, [user]);
 
   if (!isReady) {
     return (
@@ -97,6 +182,7 @@ export default function HomeScreen() {
       symbol={item.symbol}
       leverage={item.leverage}
       volume={item.volume}
+      iconUrl={item.iconUrl}
       onPress={() => handlePerpsPress(item)}
     />
   );
@@ -179,13 +265,20 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      <FlatList
-        data={mockPerpsData}
-        renderItem={renderPerpsItem}
-        keyExtractor={(item) => item.id}
-        style={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      {loadingData ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={colors.text.accent} />
+          <Text style={styles.loadingText}>Loading perps data...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={perpsData}
+          renderItem={renderPerpsItem}
+          keyExtractor={(item) => item.id}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       <BottomNavigation activeTab="home" />
     </SafeAreaView>
@@ -291,5 +384,15 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
     backgroundColor: colors.background.secondary,
     borderRadius: borderRadius.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  loadingText: {
+    color: colors.text.secondary,
+    fontSize: fontSize.sm,
   },
 });
