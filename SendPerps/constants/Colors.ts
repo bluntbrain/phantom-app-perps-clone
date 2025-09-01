@@ -1,26 +1,41 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
-const tintColorLight = '#8b5cf6';
-const tintColorDark = '#8b5cf6';
-
-export const Colors = {
-  light: {
-    text: '#ffffff',
-    background: '#000000',
-    tint: tintColorLight,
-    icon: '#666666',
-    tabIconDefault: '#666666',
-    tabIconSelected: tintColorLight,
+export const colors = {
+  background: {
+    primary: '#000000',
+    secondary: '#1a1a1a',
+    tertiary: '#2a2a2a',
+    card: '#1e1e1e',
   },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    tint: tintColorDark,
-    icon: '#666666',
-    tabIconDefault: '#666666',
-    tabIconSelected: tintColorDark,
+  text: {
+    primary: '#ffffff',
+    secondary: '#a0a0a0',
+    tertiary: '#666666',
+    accent: '#8b5cf6',
   },
-};
+  accent: {
+    purple: '#8b5cf6',
+    green: '#10b981',
+    red: '#ef4444',
+    orange: '#f59e0b',
+    blue: '#3b82f6',
+    yellow: '#eab308',
+  },
+  border: {
+    primary: '#333333',
+    secondary: '#444444',
+  },
+  ranking: {
+    first: '#ffd700',
+    second: '#c0c0c0',
+    third: '#cd7f32',
+  },
+  crypto: {
+    ethereum: '#627eea',
+    bitcoin: '#f7931a',
+    solana: '#14f195',
+    polygon: '#8247e5',
+    ripple: '#23292f',
+    others: '#a0a0a0',
+  },
+} as const;
+
+export type ColorsType = typeof colors;

@@ -1,13 +1,6 @@
-import { usePrivy } from "@privy-io/expo";
-import { View, Text, ActivityIndicator } from 'react-native';
-import LoginScreen from '../../components/LoginScreen';
-import UserScreen from '../../components/UserScreen';
+import React from "react";
+import { Redirect } from "expo-router";
 
-export default function HomeScreen() {
-  const { user } = usePrivy();
-
-  console.log('Privy user:', user);
-
-  // Show login screen if no user, otherwise show user screen
-  return user ? <UserScreen /> : <LoginScreen />;
+export default function IndexScreen() {
+  return <Redirect href="/splash" />;
 }

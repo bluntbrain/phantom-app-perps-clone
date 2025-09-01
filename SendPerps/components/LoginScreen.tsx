@@ -176,7 +176,7 @@ export default function LoginScreen() {
                   <Text style={styles.loginButtonText}>Connecting...</Text>
                 </>
               ) : (
-                <Text style={styles.loginButtonText}>Login with Privy</Text>
+                <Text style={styles.loginButtonText}>Login</Text>
               )}
             </View>
           </TouchableOpacity>
