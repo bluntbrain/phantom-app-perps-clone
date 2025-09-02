@@ -38,8 +38,6 @@ export default function ReviewOrderScreen() {
 
   const price = parseFloat(currentPrice as string) || 4460.1;
   const amountNum = parseFloat(amount as string) || 0;
-  const leverageNum = parseFloat(leverage as string) || 1;
-  const leveragedAmount = parseFloat(leveragedSize as string) || 0;
   const isLongPosition = isLong === 'true';
   
   const ethAmount = amountNum / price;

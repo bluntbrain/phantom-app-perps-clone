@@ -236,7 +236,7 @@ export const BridgeComponent: React.FC<BridgeComponentProps> = ({
         style={styles.button}
         onPress={() => setStep("completed")}
       >
-        <Text style={styles.buttonText}>I've Sent the Transaction</Text>
+        <Text style={styles.buttonText}>I&apos;ve Sent the Transaction</Text>
       </TouchableOpacity>
 
       <TouchableOpacity

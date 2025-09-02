@@ -4,7 +4,7 @@ import { colors } from '../constants/colors';
 import { spacing, borderRadius, fontSize } from '../constants/spacing';
 import { haptics } from '../utils/haptics';
 
-type TimePeriod = '1H' | '1D' | '1W' | '1M' | 'YTD' | 'ALL';
+type TimePeriod = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
 interface TimePeriodSelectorProps {
   onPeriodChange?: (period: TimePeriod) => void;
@@ -13,9 +13,9 @@ interface TimePeriodSelectorProps {
 export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   onPeriodChange,
 }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1H');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1m');
 
-  const periods: TimePeriod[] = ['1H', '1D', '1W', '1M', 'YTD', 'ALL'];
+  const periods: TimePeriod[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
   const handlePeriodPress = (period: TimePeriod) => {
     haptics.selection();

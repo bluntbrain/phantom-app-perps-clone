@@ -45,30 +45,34 @@ interface AssetContext {
   prevDayPx: string;
 }
 
+export interface CandleData {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 export class HyperliquidService {
   private baseUrl: string;
   private websocketUrl: string;
+  private priceConnections: Map<string, WebSocket> = new Map();
+  private candleConnections: Map<string, WebSocket> = new Map();
+  private candleCallbacks: Map<string, (candle: CandleData, isSnapshot?: boolean, index?: number, total?: number) => void> = new Map();
 
   constructor() {
-    console.log('[HyperliquidService] Constructor called - DIRECT API VERSION - using real Hyperliquid API');
     this.baseUrl = 'https://api.hyperliquid.xyz';
     this.websocketUrl = 'wss://api.hyperliquid.xyz/ws';
   }
 
-  /**
-   * Initialize wallet for trading operations
-   */
+  // init wallet
   public initializeWallet(walletAddress: string) {
-    console.log('[HyperliquidService] Wallet initialized for address:', walletAddress?.substring(0, 10) + '...');
-    console.log('[HyperliquidService] Ready for direct API calls');
   }
 
-  /**
-   * Make API call to Hyperliquid info endpoint
-   */
+  // api call
   private async apiCall(requestBody: any): Promise<any> {
     try {
-      console.log('[HyperliquidService] Making API call:', requestBody.type);
       
       const response = await fetch(`${this.baseUrl}/info`, {
         method: 'POST',
@@ -83,44 +87,28 @@ export class HyperliquidService {
       }
 
       const data = await response.json();
-      console.log('[HyperliquidService] API response received for:', requestBody.type);
       return data;
     } catch (error) {
-      console.error('[HyperliquidService] API call failed:', error);
+      console.error('api call failed:', error);
       throw error;
     }
   }
 
-  /**
-   * Get perpetuals metadata
-   */
+  // get metadata
   private async getMeta(): Promise<MetaResponse> {
     return await this.apiCall({ type: 'meta' });
   }
 
-  /**
-   * Get perpetuals metadata and asset contexts (includes prices, volume, etc.)
-   */
+  // get meta and contexts
   private async getMetaAndAssetCtxs(): Promise<[MetaResponse, AssetContext[]]> {
     return await this.apiCall({ type: 'metaAndAssetCtxs' });
   }
 
-  /**
-   * Get real perps data from Hyperliquid
-   */
+  // get perps data
   public async getPerpsData(): Promise<PerpsData[]> {
     try {
-      console.log('[HyperliquidService] Fetching real perps data from Hyperliquid API...');
-      
-      // Get metadata and asset contexts in one call
-      const [meta, assetCtxs] = await this.getMetaAndAssetCtxs();
-      
-      console.log('[HyperliquidService] Received data:', {
-        universeCount: meta.universe.length,
-        assetCtxsCount: assetCtxs.length
-      });
-
-      // Transform API data to our PerpsData format
+      // get meta and contexts
+      const [meta, assetCtxs] = await this.getMetaAndAssetCtxs();      // transform to perps format
       const perpsData: PerpsData[] = meta.universe
         .map((asset, index) => {
           const assetCtx = assetCtxs[index];
@@ -130,15 +118,7 @@ export class HyperliquidService {
           }
 
           const volume = parseFloat(assetCtx.dayNtlVlm);
-          const formattedVolume = this.formatVolume(volume);
-          
-          console.log(`[HyperliquidService] Processing ${asset.name}:`, {
-            markPrice: assetCtx.markPx,
-            volume: formattedVolume,
-            maxLeverage: asset.maxLeverage
-          });
-
-          const item: PerpsData = {
+          const formattedVolume = this.formatVolume(volume);          const item: PerpsData = {
             id: (index + 1).toString(),
             rank: index + 1,
             symbol: `${asset.name}-USD`,
@@ -149,43 +129,25 @@ export class HyperliquidService {
           };
           return item;
         })
-        .filter((item): item is PerpsData => item !== null);
-
-      console.log('[HyperliquidService] Real perps data processed:', {
-        totalCount: perpsData.length,
-        firstItem: perpsData[0]?.symbol
-      });
-
-      return perpsData;
+        .filter((item): item is PerpsData => item !== null);      return perpsData;
     } catch (error) {
-      console.error('[HyperliquidService] Failed to fetch real perps data:', error);
+      console.error('failed to fetch perps:', error);
       throw error;
     }
   }
 
-  /**
-   * Get user's portfolio balance
-   */
+  // get user balance
   public async getUserBalance(userAddress: string): Promise<HyperliquidBalance> {
     try {
-      console.log('[HyperliquidService] Fetching user balance for:', userAddress.substring(0, 10) + '...');
-      
       const clearinghouseState = await this.apiCall({
         type: 'clearinghouseState',
         user: userAddress
-      });
-
-      console.log('[HyperliquidService] User balance received:', {
-        accountValue: clearinghouseState.marginSummary.accountValue,
-        withdrawable: clearinghouseState.withdrawable
-      });
-
-      return {
+      });      return {
         totalValue: clearinghouseState.marginSummary.accountValue,
         availableBalance: clearinghouseState.withdrawable,
       };
     } catch (error) {
-      console.error('[HyperliquidService] Failed to fetch user balance:', error);
+      console.error('failed to fetch balance:', error);
       return {
         totalValue: '0',
         availableBalance: '0',
@@ -193,13 +155,9 @@ export class HyperliquidService {
     }
   }
 
-  /**
-   * Get user's open positions
-   */
+  // get positions
   public async getUserPositions(userAddress: string): Promise<HyperliquidPosition[]> {
     try {
-      console.log('[HyperliquidService] Fetching user positions for:', userAddress.substring(0, 10) + '...');
-      
       const clearinghouseState = await this.apiCall({
         type: 'clearinghouseState',
         user: userAddress
@@ -212,28 +170,20 @@ export class HyperliquidService {
         pnl: position.position.unrealizedPnl,
         unrealizedPnl: position.position.unrealizedPnl,
         isLong: parseFloat(position.position.szi) > 0,
-      }));
-
-      console.log('[HyperliquidService] User positions received:', positions.length, 'positions');
-      return positions;
+      }));      return positions;
     } catch (error) {
-      console.error('[HyperliquidService] Failed to fetch user positions:', error);
+      console.error('failed to fetch positions:', error);
       return [];
     }
   }
 
-  /**
-   * Get current price for a specific asset
-   */
+  // get price
   public async getCurrentPrice(coin: string): Promise<number> {
     try {
-      console.log('[HyperliquidService] Fetching current price for:', coin);
-      
-      // Get asset contexts which includes current prices
+      // get contexts with prices
       const [, assetCtxs] = await this.getMetaAndAssetCtxs();
       const meta = await this.getMeta();
-      
-      // Find the asset index
+      // find asset
       const assetIndex = meta.universe.findIndex(asset => asset.name === coin);
       if (assetIndex === -1) {
         throw new Error(`Asset ${coin} not found`);
@@ -242,43 +192,93 @@ export class HyperliquidService {
       const assetCtx = assetCtxs[assetIndex];
       if (!assetCtx) {
         throw new Error(`Price data for ${coin} not available`);
-      }
-
-      const price = parseFloat(assetCtx.markPx);
-      console.log('[HyperliquidService] Current price for', coin + ':', price);
-      
+      }      const price = parseFloat(assetCtx.markPx);
       return price;
     } catch (error) {
-      console.error('[HyperliquidService] Failed to fetch current price for', coin + ':', error);
+      console.error('failed to fetch price:', coin, error);
       return 0;
     }
   }
 
-  /**
-   * Get L2 order book data
-   */
-  public async getOrderBook(coin: string) {
+  // fetch candle history
+  public async getCandleSnapshot(coin: string, interval: string, startTime?: number, endTime?: number): Promise<CandleData[]> {
     try {
-      return await this.apiCall({ type: 'l2Book', coin });
+      // calc time range (50 candles)
+      const now = Date.now();
+      const intervalMs = this.getIntervalMs(interval);
+      const candleCount = 50;
+      
+      if (!endTime) {
+        endTime = now;
+      }
+      if (!startTime) {
+        startTime = endTime - (intervalMs * candleCount);
+      }
+      
+      const requestBody = {
+        type: 'candleSnapshot',
+        req: {
+          coin: coin,
+          interval: interval,
+          startTime: startTime,
+          endTime: endTime
+        }
+      };
+      
+      const response = await this.apiCall(requestBody);
+      if (Array.isArray(response)) {
+        // convert to candle format
+        const candles: CandleData[] = response.map((candle: any) => ({
+          timestamp: candle.t || candle.T || Date.now(),
+          open: parseFloat(candle.o || '0'),
+          high: parseFloat(candle.h || '0'),
+          low: parseFloat(candle.l || '0'),
+          close: parseFloat(candle.c || '0'),
+          volume: parseFloat(candle.v || '0')
+        }));
+        // sort by time
+        candles.sort((a, b) => a.timestamp - b.timestamp);
+        
+        return candles;
+      }
+      return [];
     } catch (error) {
-      console.error('[HyperliquidService] Failed to fetch order book for', coin + ':', error);
-      return null;
+      console.error('candle fetch error:', error);
+      return [];
     }
   }
+  
+  // get interval ms
+  private getIntervalMs(interval: string): number {
+    const intervals: { [key: string]: number } = {
+      '1m': 60 * 1000,
+      '3m': 3 * 60 * 1000,
+      '5m': 5 * 60 * 1000,
+      '15m': 15 * 60 * 1000,
+      '30m': 30 * 60 * 1000,
+      '1h': 60 * 60 * 1000,
+      '2h': 2 * 60 * 60 * 1000,
+      '4h': 4 * 60 * 60 * 1000,
+      '8h': 8 * 60 * 60 * 1000,
+      '12h': 12 * 60 * 60 * 1000,
+      '1d': 24 * 60 * 60 * 1000,
+      '3d': 3 * 24 * 60 * 60 * 1000,
+      '1w': 7 * 24 * 60 * 60 * 1000,
+      '1M': 30 * 24 * 60 * 60 * 1000
+    };
+    return intervals[interval] || 60 * 1000;
+  }
 
-  /**
-   * Subscribe to real-time price updates via WebSocket
-   */
-  public subscribeToPrice(coin: string, callback: (price: number) => void): WebSocket | null {
+  // price ws subscription
+  public subscribeToPrice(coin: string, callback: (price: number) => void): void {
     try {
-      console.log('[HyperliquidService] Connecting to WebSocket for', coin, 'price updates...');
-      
+      // close existing
+      this.unsubscribeFromPrice(coin);
+
       const ws = new WebSocket(this.websocketUrl);
+      let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
       
       ws.onopen = () => {
-        console.log('[HyperliquidService] WebSocket connected for', coin);
-        
-        // Subscribe to trades for real-time price updates
         const subscription = {
           method: 'subscribe',
           subscription: {
@@ -286,58 +286,91 @@ export class HyperliquidService {
             coin: coin
           }
         };
-        
         ws.send(JSON.stringify(subscription));
-        console.log('[HyperliquidService] Subscribed to trades for', coin);
+        // heartbeat - ping every 30s to keep ws alive
+        heartbeatInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ method: 'ping' }));
+          }
+        }, 30000);
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
-          if (data.channel === 'trades' && data.data && data.data.length > 0) {
+          if (data.channel === 'subscriptionResponse') {
+            // confirmed
+          } else if (data.channel === 'trades' && data.data && data.data.length > 0) {
             const latestTrade = data.data[data.data.length - 1];
             const price = parseFloat(latestTrade.px);
-            
-            console.log('[HyperliquidService] Price update for', coin + ':', price);
-            
             if (price > 0) {
               callback(price);
             }
+          } else if (data.channel === 'error') {
+            console.error('price ws error:', data.data);
           }
         } catch (error) {
-          console.error('[HyperliquidService] Error processing WebSocket message:', error);
+          console.error('price msg error:', error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[HyperliquidService] WebSocket error for', coin + ':', error);
+        console.error('price ws error:', coin, error);
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+        }
       };
 
-      ws.onclose = () => {
-        console.log('[HyperliquidService] WebSocket closed for', coin);
+      ws.onclose = (event) => {
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+        }
+        this.priceConnections.delete(coin);
       };
 
-      return ws;
+      this.priceConnections.set(coin, ws);
+      
     } catch (error) {
-      console.error('[HyperliquidService] Failed to subscribe to price updates for', coin + ':', error);
-      return null;
+      console.error('price ws create failed:', coin, error);
     }
   }
 
-  /**
-   * Subscribe to candle/chart data via WebSocket  
-   */
-  public subscribeToCandles(coin: string, interval: string, callback: (candle: any) => void): WebSocket | null {
+  // unsubscribe price
+  public unsubscribeFromPrice(coin: string): void {
+    const ws = this.priceConnections.get(coin);
+    if (ws) {
+      ws.close();
+      this.priceConnections.delete(coin);
+    }
+  }
+
+  // candle ws subscription
+  public subscribeToCandles(
+    coin: string, 
+    interval: string, 
+    callback: (candle: CandleData, isSnapshot?: boolean, index?: number, total?: number) => void
+  ): void {
     try {
-      console.log('[HyperliquidService] Connecting to WebSocket for', coin, 'candle data...');
-      
+      const callbackKey = `${coin}-${interval}`;
+      // store callback first
+      this.candleCallbacks.set(callbackKey, callback);
+      // check existing
+      const existingWs = this.candleConnections.get(coin);
+      if (existingWs && existingWs.readyState === WebSocket.OPEN) {
+        // reuse connection
+        return;
+      }
+      // close if not open
+      if (existingWs) {
+        existingWs.close();
+        this.candleConnections.delete(coin);
+      }
+
       const ws = new WebSocket(this.websocketUrl);
+      let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
       
       ws.onopen = () => {
-        console.log('[HyperliquidService] WebSocket connected for', coin, 'candle');
         
-        // Subscribe to candle for chart data (note: "candle" not "candles")
         const subscription = {
           method: 'subscribe',
           subscription: {
@@ -348,52 +381,127 @@ export class HyperliquidService {
         };
         
         ws.send(JSON.stringify(subscription));
-        console.log('[HyperliquidService] Subscribed to candle for', coin, 'interval:', interval);
+        // heartbeat - ping every 30s to keep ws alive
+        heartbeatInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ method: 'ping' }));
+          }
+        }, 30000);
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           
-          console.log('[HyperliquidService] Candle WebSocket message:', {
-            channel: data.channel,
-            hasData: !!data.data,
-            dataType: typeof data.data
-          });
-          
-          if (data.channel === 'candle' && data.data) {
-            callback(data.data);
-          } else if (data.channel === 'subscriptionResponse') {
-            console.log('[HyperliquidService] Candle subscription confirmed for', coin);
+          if (data.channel === 'subscriptionResponse') {
+            // confirmed
+          } else if (data.channel === 'candle') {
+            if (!data.data) {
+              return;
+            }
+            
+            const isSnapshot = data.isSnapshot || false;
+            // handle array or single
+            const candles = Array.isArray(data.data) ? data.data : [data.data];
+            
+            candles.forEach((candle: any, index: number) => {
+              if (candle && typeof candle === 'object') {
+                try {
+                  const processedCandle: CandleData = {
+                    timestamp: candle.t || candle.timestamp || Date.now(),
+                    open: parseFloat(String(candle.o || candle.open || '0')),
+                    high: parseFloat(String(candle.h || candle.high || '0')),
+                    low: parseFloat(String(candle.l || candle.low || '0')),
+                    close: parseFloat(String(candle.c || candle.close || '0')),
+                    volume: parseFloat(String(candle.v || candle.volume || '0')),
+                  };
+                  // validate
+                  if (isNaN(processedCandle.open) || isNaN(processedCandle.close) || 
+                      processedCandle.open <= 0 || processedCandle.close <= 0) {
+                    return;
+                  }
+                  // call callback
+                  const storedCallback = this.candleCallbacks.get(callbackKey);
+                  if (storedCallback) {
+                    storedCallback(processedCandle, isSnapshot, index, candles.length);
+                  }
+                } catch (error) {
+                  console.error('candle process error:', error);
+                }
+              } else {
+              }
+            });
           } else if (data.channel === 'error') {
-            console.error('[HyperliquidService] Candle subscription error:', data.data);
+            console.error('candle ws error:', data.data);
           }
         } catch (error) {
-          console.error('[HyperliquidService] Error processing candle WebSocket message:', error);
+          console.error('ws msg error:', error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[HyperliquidService] Candle WebSocket error for', coin + ':', error);
+        console.error('candle ws error:', coin, error);
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+        }
       };
 
-      ws.onclose = () => {
-        console.log('[HyperliquidService] Candle WebSocket closed for', coin);
+      ws.onclose = (event) => {
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+        }
+        this.candleConnections.delete(coin);
       };
 
-      return ws;
+      this.candleConnections.set(coin, ws);
+      
     } catch (error) {
-      console.error('[HyperliquidService] Failed to subscribe to candle for', coin + ':', error);
+      console.error('candle ws create failed:', coin, error);
+    }
+  }
+
+  // unsubscribe candles
+  public unsubscribeFromCandles(coin: string): void {
+    const ws = this.candleConnections.get(coin);
+    if (ws) {
+      ws.close();
+      this.candleConnections.delete(coin);
+    }
+    // keep callbacks for re-renders
+  }
+
+  // clear callback
+  public clearCandleCallback(coin: string, interval: string): void {
+    const callbackKey = `${coin}-${interval}`;
+    if (this.candleCallbacks.has(callbackKey)) {
+      this.candleCallbacks.delete(callbackKey);
+    }
+  }
+
+  // close all
+  public closeAllConnections(): void {
+    this.priceConnections.forEach((ws, coin) => {
+      ws.close();
+    });
+    this.priceConnections.clear();
+
+    this.candleConnections.forEach((ws, coin) => {
+      ws.close();
+    });
+    this.candleConnections.clear();
+  }
+
+  // get order book
+  public async getOrderBook(coin: string) {
+    try {
+      return await this.apiCall({ type: 'l2Book', coin });
+    } catch (error) {
+      console.error('order book failed:', coin, error);
       return null;
     }
   }
 
-  // TODO: Implement trading methods when needed
-  // For now, we're focusing on data fetching and WebSocket connections
-
-  /**
-   * Format volume for display
-   */
+  // format volume
   private formatVolume(volume: number): string {
     if (volume >= 1e9) {
       return `$${(volume / 1e9).toFixed(1)}B`;
@@ -406,9 +514,7 @@ export class HyperliquidService {
     }
   }
 
-  /**
-   * Get coin icon URL from CoinGecko API
-   */
+  // get icon url
   private getCoinIcon(symbol: string): string | undefined {
     const iconMappings: { [key: string]: string } = {
       'BTC': 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
@@ -447,9 +553,7 @@ export class HyperliquidService {
     return iconMappings[symbol];
   }
 
-  /**
-   * Get human-readable asset name
-   */
+  // get asset name
   private getAssetName(symbol: string): string {
     const names: { [key: string]: string } = {
       'BTC': 'Bitcoin',
@@ -468,7 +572,5 @@ export class HyperliquidService {
     };
     return names[symbol] || symbol;
   }
-}
-
-// Export singleton instance
+}// singleton
 export const hyperliquidService = new HyperliquidService();

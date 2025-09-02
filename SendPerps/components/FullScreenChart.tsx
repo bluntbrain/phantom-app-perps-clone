@@ -19,6 +19,8 @@ interface FullScreenChartProps {
   symbol: string;
   currentPrice: number;
   renderCandlesticks: (isFullScreen: boolean) => React.ReactNode;
+  currentInterval?: string;
+  onIntervalChange?: (interval: string) => void;
 }
 
 export const FullScreenChart: React.FC<FullScreenChartProps> = ({
@@ -27,7 +29,11 @@ export const FullScreenChart: React.FC<FullScreenChartProps> = ({
   symbol,
   currentPrice,
   renderCandlesticks,
+  currentInterval = '1m',
+  onIntervalChange,
 }) => {
+  const intervals = ['1m', '5m', '15m', '1h', '4h', '1d'];
+  
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={styles.fullScreenContainer}>
@@ -61,28 +67,25 @@ export const FullScreenChart: React.FC<FullScreenChartProps> = ({
         </View>
 
         <View style={styles.advancedControls}>
-          <TouchableOpacity style={styles.controlButton}>
-            <Text style={styles.controlButtonText}>1M</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton}>
-            <Text style={styles.controlButtonText}>5M</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.controlButton, styles.activeControl]}
-          >
-            <Text style={[styles.controlButtonText, styles.activeControlText]}>
-              15M
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton}>
-            <Text style={styles.controlButtonText}>1H</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton}>
-            <Text style={styles.controlButtonText}>4H</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton}>
-            <Text style={styles.controlButtonText}>1D</Text>
-          </TouchableOpacity>
+          {intervals.map((intervalOption) => (
+            <TouchableOpacity
+              key={intervalOption}
+              style={[
+                styles.controlButton,
+                currentInterval === intervalOption && styles.activeControl,
+              ]}
+              onPress={() => onIntervalChange?.(intervalOption)}
+            >
+              <Text
+                style={[
+                  styles.controlButtonText,
+                  currentInterval === intervalOption && styles.activeControlText,
+                ]}
+              >
+                {intervalOption.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.fullScreenChartContainer}>

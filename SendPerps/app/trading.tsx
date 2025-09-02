@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
@@ -21,12 +20,12 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function TradingScreen() {
   // safe parameter extraction with error handling
-  let params;
+  const params = useLocalSearchParams();
+
   let symbol = "ETH-USD";
   let name = "Ethereum";
 
   try {
-    params = useLocalSearchParams();
     symbol =
       params?.symbol && typeof params.symbol === "string"
         ? params.symbol
@@ -35,9 +34,7 @@ export default function TradingScreen() {
       params?.name && typeof params.name === "string"
         ? params.name
         : "Ethereum";
-  } catch (error) {
-    console.error("[TradingScreen] Error getting params:", error);
-  }
+  } catch (error) {}
 
   const [currentPrice, setCurrentPrice] = useState(100.0);
   const [change, setChange] = useState(1.5);
@@ -45,28 +42,18 @@ export default function TradingScreen() {
   const [availableBalance, setAvailableBalance] = useState(1250.0);
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [selectedInterval, setSelectedInterval] = useState<string>('1m');
 
   // static data loading with error handling
   useEffect(() => {
-    try {
-      console.log(
-        "[TradingScreen] Loading trading screen for symbol:",
-        symbol,
-        "name:",
-        name
-      );
-
-      //  set static data, no dynamic logic to prevent crashes
+    try {      //  set static data, no dynamic logic to prevent crashes
       setCurrentPrice(100.0);
       setChange(1.5);
       setChangePercent(1.5);
       setAvailableBalance(1250.0);
       setLoadingPrice(false);
       setHasError(false);
-
-      console.log("[TradingScreen] Successfully loaded static data for", name);
     } catch (error) {
-      console.error("[TradingScreen] Critical error in useEffect:", error);
       // fallback - set everything to safe defaults
       try {
         setCurrentPrice(100.0);
@@ -76,7 +63,6 @@ export default function TradingScreen() {
         setLoadingPrice(false);
         setHasError(true);
       } catch (innerError) {
-        console.error("[TradingScreen] Critical inner error:", innerError);
       }
     }
   }, [symbol, name]);
@@ -86,11 +72,9 @@ export default function TradingScreen() {
       haptics.light();
       router.back();
     } catch (error) {
-      console.error("[TradingScreen] Error in handleBackPress:", error);
       try {
         router.back();
       } catch (innerError) {
-        console.error("[TradingScreen] Critical error going back:", innerError);
       }
     }
   };
@@ -108,7 +92,6 @@ export default function TradingScreen() {
         },
       });
     } catch (error) {
-      console.error("[TradingScreen] Error in handleLongPress:", error);
     }
   };
 
@@ -125,16 +108,14 @@ export default function TradingScreen() {
         },
       });
     } catch (error) {
-      console.error("[TradingScreen] Error in handleShortPress:", error);
     }
   };
 
   const handlePeriodChange = (period: string) => {
     try {
       haptics.selection();
-      console.log(`Time period changed to: ${period}`);
+      setSelectedInterval(period);
     } catch (error) {
-      console.error("[TradingScreen] Error in handlePeriodChange:", error);
     }
   };
 
@@ -143,7 +124,6 @@ export default function TradingScreen() {
       haptics.light();
       router.push("/addfunds");
     } catch (error) {
-      console.error("[TradingScreen] Error in handleAddFunds:", error);
     }
   };
 
@@ -204,12 +184,28 @@ export default function TradingScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <AdvancedTradingChart
-            symbol={symbol as string}
-            currentPrice={loadingPrice ? 0 : currentPrice}
-            change={change}
-            changePercent={changePercent}
-          />
+          {(() => {
+            try {
+              return (
+                <AdvancedTradingChart
+                  symbol={symbol as string}
+                  currentPrice={loadingPrice ? 0 : currentPrice}
+                  change={change}
+                  changePercent={changePercent}
+                  interval={selectedInterval}
+                  onIntervalChange={handlePeriodChange}
+                />
+              );
+            } catch (error) {
+              return (
+                <View style={{ padding: 20, backgroundColor: "red" }}>
+                  <Text style={{ color: "white" }}>
+                    Chart Error: {String(error)}
+                  </Text>
+                </View>
+              );
+            }
+          })()}
 
           <TimePeriodSelector onPeriodChange={handlePeriodChange} />
 
@@ -261,7 +257,6 @@ export default function TradingScreen() {
       </SafeAreaView>
     );
   } catch (renderError) {
-    console.error("[TradingScreen] Critical render error:", renderError);
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#000000" }}>
         <View
