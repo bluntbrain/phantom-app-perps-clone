@@ -1,54 +1,83 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
-import { spacing } from '../constants/spacing';
-import { haptics } from '../utils/haptics';
+import React from "react";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { router, usePathname } from "expo-router";
+import { colors } from "../constants/colors";
+import { spacing } from "../constants/spacing";
+import { haptics } from "../utils/haptics";
 
 interface BottomNavigationProps {
-  activeTab?: 'home' | 'refresh' | 'history' | 'search';
+  activeTab?: "home" | "refresh" | "history" | "search";
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
-  activeTab = 'home',
+  activeTab,
 }) => {
+  const pathname = usePathname();
+
+  // determine active tab based on current route
+  const getActiveTab = () => {
+    if (activeTab) return activeTab;
+    if (pathname.includes("history")) return "history";
+    if (pathname.includes("home") || pathname === "/") return "home";
+    return "home";
+  };
+
+  const currentTab = getActiveTab();
+
   const handleTabPress = (tab: string) => {
     haptics.light();
-    console.log(`Pressed ${tab} tab`);
+
+    switch (tab) {
+      case "home":
+        router.push("/home");
+        break;
+      case "history":
+        router.push("/history");
+        break;
+      case "refresh":
+        // Trigger refresh action
+        console.log("Refresh pressed");
+        break;
+      case "search":
+        // Navigate to search or show search modal
+        console.log("Search pressed");
+        break;
+    }
   };
 
   const getIconColor = (tab: string) => {
-    return activeTab === tab ? colors.text.primary : colors.text.secondary;
+    return currentTab === tab ? colors.text.primary : colors.text.secondary;
   };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => handleTabPress('home')}
+        onPress={() => handleTabPress("home")}
       >
-        <Feather name="home" size={24} color={getIconColor('home')} />
+        <Feather name="home" size={24} color={getIconColor("home")} />
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => handleTabPress('refresh')}
+        onPress={() => handleTabPress("refresh")}
       >
-        <Feather name="refresh-cw" size={24} color={getIconColor('refresh')} />
+        <Feather name="refresh-cw" size={24} color={getIconColor("refresh")} />
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => handleTabPress('history')}
+        onPress={() => handleTabPress("history")}
       >
-        <Feather name="clock" size={24} color={getIconColor('history')} />
+        <Feather name="clock" size={24} color={getIconColor("history")} />
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => handleTabPress('search')}
+        onPress={() => handleTabPress("search")}
       >
-        <Feather name="search" size={24} color={getIconColor('search')} />
+        <Feather name="search" size={24} color={getIconColor("search")} />
       </TouchableOpacity>
     </View>
   );
@@ -56,7 +85,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderTopWidth: 1,
@@ -65,7 +94,7 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: spacing.sm,
   },
 });

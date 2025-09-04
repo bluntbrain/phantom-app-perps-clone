@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
@@ -10,17 +9,21 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { colors } from "../constants/colors";
-import { spacing, fontSize, borderRadius } from "../constants/spacing";
 import { haptics } from "../utils/haptics";
 import * as Haptics from "expo-haptics";
 import { AdvancedTradingChart } from "../components/AdvancedTradingChart";
 import { TimePeriodSelector } from "../components/TimePeriodSelector";
 import { BottomNavigation } from "../components/BottomNavigation";
 import { Ionicons } from "@expo/vector-icons";
+import { hyperliquidService } from "../services/HyperliquidService";
+import { tradingStyles as styles } from "../styles/screens/tradingStyles";
+import { useWallet, useWalletBalance } from "../hooks";
 
 export default function TradingScreen() {
   // safe parameter extraction with error handling
   const params = useLocalSearchParams();
+  const { address } = useWallet();
+  const { balance, isLoading: loadingBalance } = useWalletBalance();
 
   let symbol = "ETH-USD";
   let name = "Ethereum";
@@ -39,18 +42,18 @@ export default function TradingScreen() {
   const [currentPrice, setCurrentPrice] = useState(100.0);
   const [change, setChange] = useState(1.5);
   const [changePercent, setChangePercent] = useState(1.5);
-  const [availableBalance, setAvailableBalance] = useState(1250.0);
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [selectedInterval, setSelectedInterval] = useState<string>('1m');
+  const [selectedInterval, setSelectedInterval] = useState<string>("1m");
 
-  // static data loading with error handling
+
+  // static price data loading with error handling
   useEffect(() => {
-    try {      //  set static data, no dynamic logic to prevent crashes
+    try {
+      //  set static data, no dynamic logic to prevent crashes
       setCurrentPrice(100.0);
       setChange(1.5);
       setChangePercent(1.5);
-      setAvailableBalance(1250.0);
       setLoadingPrice(false);
       setHasError(false);
     } catch (error) {
@@ -59,11 +62,9 @@ export default function TradingScreen() {
         setCurrentPrice(100.0);
         setChange(0.0);
         setChangePercent(0.0);
-        setAvailableBalance(1000.0);
         setLoadingPrice(false);
         setHasError(true);
-      } catch (innerError) {
-      }
+      } catch (innerError) {}
     }
   }, [symbol, name]);
 
@@ -74,8 +75,7 @@ export default function TradingScreen() {
     } catch (error) {
       try {
         router.back();
-      } catch (innerError) {
-      }
+      } catch (innerError) {}
     }
   };
 
@@ -91,8 +91,7 @@ export default function TradingScreen() {
           autoCloseEnabled: "false",
         },
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleShortPress = () => {
@@ -107,24 +106,21 @@ export default function TradingScreen() {
           autoCloseEnabled: "false",
         },
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handlePeriodChange = (period: string) => {
     try {
       haptics.selection();
       setSelectedInterval(period);
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleAddFunds = () => {
     try {
       haptics.light();
       router.push("/addfunds");
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   // error state
@@ -213,11 +209,11 @@ export default function TradingScreen() {
             <View style={styles.balanceRow}>
               <Text style={styles.balanceLabel}>Available to trade</Text>
               <View style={styles.balanceRight}>
-                {loadingPrice ? (
+                {loadingBalance ? (
                   <ActivityIndicator size="small" color={colors.text.accent} />
                 ) : (
                   <Text style={styles.balanceAmount}>
-                    ${availableBalance.toFixed(2)}
+                    ${balance.toFixed(2)}
                   </Text>
                 )}
                 <TouchableOpacity
@@ -268,146 +264,3 @@ export default function TradingScreen() {
     );
   }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.primary,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  backButton: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerLogo: {
-    width: 28,
-    height: 28,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  cryptoIcon: {
-    marginRight: spacing.sm,
-  },
-  iconPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.full,
-  },
-  headerText: {
-    alignItems: "flex-start",
-  },
-  symbolText: {
-    color: colors.text.primary,
-    fontSize: fontSize.lg,
-    fontWeight: "600",
-  },
-  typeText: {
-    color: colors.text.secondary,
-    fontSize: fontSize.sm,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacing.md,
-  },
-  fixedButtonContainer: {
-    backgroundColor: colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.primary,
-    paddingTop: spacing.sm,
-  },
-  balanceSection: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.primary,
-  },
-  balanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  balanceLabel: {
-    color: colors.text.secondary,
-    fontSize: fontSize.md,
-  },
-  balanceRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  balanceAmount: {
-    color: colors.text.primary,
-    fontSize: fontSize.md,
-    fontWeight: "500",
-  },
-  addButton: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background.tertiary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  infoSection: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
-  },
-  infoText: {
-    color: colors.text.secondary,
-    fontSize: fontSize.md,
-  },
-  tradingButtons: {
-    flexDirection: "row",
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-  },
-  tradingButton: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-  },
-  longButton: {
-    backgroundColor: colors.accent.purple,
-  },
-  shortButton: {
-    backgroundColor: colors.accent.purple,
-  },
-  tradingButtonText: {
-    color: colors.text.primary,
-    fontSize: fontSize.lg,
-    fontWeight: "600",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  loadingText: {
-    color: colors.text.secondary,
-    fontSize: fontSize.sm,
-  },
-});

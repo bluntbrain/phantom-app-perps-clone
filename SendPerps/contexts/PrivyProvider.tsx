@@ -52,7 +52,7 @@ export default function PrivyWrapper({ children }: PrivyWrapperProps) {
           logo: "https://your-domain.com/logo.png",
         },
         embeddedWallets: {
-          createOnLogin: "users-without-wallets",
+          createOnLogin: "all-users",
           noPromptOnSignature: true,
         },
         mfa: {

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  StyleSheet,
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
@@ -13,14 +12,22 @@ import { usePrivy } from "@privy-io/expo";
 import { Ionicons } from "@expo/vector-icons";
 import LoginScreen from "../components/LoginScreen";
 import { colors } from "../constants/colors";
-import { spacing, fontSize, borderRadius } from "../constants/spacing";
 import { haptics } from "../utils/haptics";
 import { PerpsCard } from "../components/PerpsCard";
 import { BottomNavigation } from "../components/BottomNavigation";
 import { hyperliquidService, PerpsData } from "../services/HyperliquidService";
+import { homeStyles as styles } from "../styles/screens/homeStyles";
+import { useWallet, useWalletBalance } from "../hooks";
 
 export default function HomeScreen() {
   const { user, logout, isReady } = usePrivy();
+  const { address, isConnected } = useWallet();
+  const {
+    balance,
+    spotBalance,
+    totalBalance,
+    isLoading: balanceLoading,
+  } = useWalletBalance();
   const [selectedFilter, setSelectedFilter] = useState<"Volume" | "24h">(
     "Volume"
   );
@@ -30,81 +37,71 @@ export default function HomeScreen() {
   // load real Hyperliquid data when user connects
   React.useEffect(() => {
     const loadRealData = async () => {
-      console.log("[HomeScreen] loadRealData called, user:", !!user);
-
       if (user) {
-        console.log("[HomeScreen] User found, starting data load...");
-        console.log(
-          "[HomeScreen] User linked accounts:",
-          user.linked_accounts?.length
-        );
+        console.log("[HomeScreen] Loading data:", {
+          user: !!user,
+          linkedAccounts: user.linked_accounts?.length || 0,
+        });
+
+        // Check wallet status
+        console.log("[HomeScreen] Wallet status:", {
+          linkedAccounts: user.linked_accounts?.map((a) => ({
+            type: a.type,
+            hasAddress: "address" in a,
+            address: (a as any).address?.substring(0, 10),
+          })),
+          wallet: {
+            isConnected,
+            address: address?.substring(0, 10),
+          },
+        });
 
         setLoadingData(true);
         try {
-          // get wallet address from linked accounts
-          const walletAccount = user.linked_accounts?.find(
+          // Use wallet from linked accounts
+          let walletAccount = user.linked_accounts?.find(
             (account) =>
               (account.type === "wallet" || account.type === "smart_wallet") &&
               "address" in account
           ) as { address: string; wallet_client_type?: string } | undefined;
 
-          console.log(
-            "[HomeScreen] Wallet account found:",
-            !!walletAccount?.address
-          );
-          console.log(
-            "[HomeScreen] Wallet address:",
-            walletAccount?.address?.substring(0, 10) + "..."
-          );
+          console.log("[HomeScreen] Wallet found:", {
+            hasWallet: !!walletAccount?.address,
+            address: walletAccount?.address?.substring(0, 10),
+          });
 
           if (walletAccount?.address) {
-            // initialize wallet with Privy
+            // Get perps data - no wallet initialization needed for read operations
             const embeddedWallet = user.linked_accounts?.find(
               (account) =>
                 account.type === "wallet" &&
                 account.wallet_client_type === "privy"
             );
 
-            console.log(
-              "[HomeScreen] Embedded wallet found:",
-              !!embeddedWallet
-            );
-            console.log("[HomeScreen] Initializing HyperliquidService...");
-
-            hyperliquidService.initializeWallet(walletAccount.address);
-
-            console.log("[HomeScreen] Fetching real perps data...");
-            // load real perps data
             const realPerpsData = await hyperliquidService.getPerpsData();
-            console.log("[HomeScreen] Real perps data received:", {
-              length: realPerpsData.length,
-              firstItem: realPerpsData[0]?.symbol,
+            console.log("[HomeScreen] Perps data:", {
+              embeddedWallet: !!embeddedWallet,
+              dataLength: realPerpsData.length,
+              firstSymbol: realPerpsData[0]?.symbol,
             });
 
             if (realPerpsData.length > 0) {
-              console.log("[HomeScreen] Setting real perps data to state");
               setPerpsData(realPerpsData);
             } else {
-              console.log("[HomeScreen] No real perps data, keeping mock data");
+              console.log("[HomeScreen] No perps data available");
             }
           } else {
-            console.log("[HomeScreen] No wallet address found");
+            console.log("[HomeScreen] No wallet found");
           }
         } catch (error) {
-          console.error("[HomeScreen] Failed to load real data:", error);
-          console.error("[HomeScreen] Error details:", {
-            message: error instanceof Error ? error.message : "Unknown error",
-            stack:
-              error instanceof Error
-                ? error.stack?.substring(0, 200)
-                : undefined,
+          console.error("[HomeScreen] Data load failed:", {
+            error: error instanceof Error ? error.message : error,
           });
         } finally {
-          console.log("[HomeScreen] Setting loadingData to false");
           setLoadingData(false);
         }
       } else {
-        console.log("[HomeScreen] No user found, skipping data load");
+        console.log("[HomeScreen] No user found");
       }
     };
 
@@ -148,20 +145,9 @@ export default function HomeScreen() {
   };
 
   const getWalletAddress = () => {
-    const walletAccount = user?.linked_accounts?.find(
-      (account) =>
-        (account.type === "wallet" || account.type === "smart_wallet") &&
-        "address" in account
-    ) as { address: string } | undefined;
-
-    if (walletAccount?.address) {
-      return (
-        walletAccount.address.slice(0, 6) +
-        "..." +
-        walletAccount.address.slice(-4)
-      );
+    if (address) {
+      return address.slice(0, 6) + "..." + address.slice(-4);
     }
-
     return "No wallet";
   };
 
@@ -217,6 +203,30 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Balance Display */}
+      <View style={styles.balanceContainer}>
+        <View style={styles.balanceRow}>
+          {balanceLoading ? (
+            <ActivityIndicator size="small" color={colors.text.accent} />
+          ) : (
+            <Text style={styles.balanceAmount}>
+              $
+              {totalBalance.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </Text>
+          )}
+        </View>
+        {address && !balanceLoading && (
+          <View style={styles.balanceBreakdown}>
+            <Text style={styles.balanceSubtext}>
+              Perps: ${balance.toFixed(2)} • Spot: ${spotBalance.toFixed(2)}
+            </Text>
+          </View>
+        )}
+      </View>
+
       <View style={styles.filterContainer}>
         <TouchableOpacity
           style={[
@@ -256,9 +266,7 @@ export default function HomeScreen() {
       <View style={styles.tableHeader}>
         <View style={styles.tableHeaderLeft}>
           <Text style={styles.tableHeaderText}>#</Text>
-          <Text style={[styles.tableHeaderText, { marginLeft: spacing.xl }]}>
-            Perps
-          </Text>
+          <Text style={styles.tableHeaderText}>Perps</Text>
         </View>
         <Text style={styles.tableHeaderText}>
           Volume <Text style={styles.sortIcon}>↓</Text>
@@ -284,115 +292,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.primary,
-  },
-  leftSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  headerLogo: {
-    width: 32,
-    height: 32,
-  },
-  title: {
-    color: colors.text.primary,
-    fontSize: fontSize.xl,
-    fontWeight: "600",
-  },
-  filterContainer: {
-    flexDirection: "row",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-  },
-  filterButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.background.secondary,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.background.tertiary,
-  },
-  filterText: {
-    color: colors.text.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: "500",
-  },
-  filterTextActive: {
-    color: colors.text.primary,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.primary,
-  },
-  tableHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  tableHeaderText: {
-    color: colors.text.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: "500",
-  },
-  sortIcon: {
-    color: colors.text.secondary,
-    fontSize: fontSize.xs,
-  },
-  list: {
-    flex: 1,
-  },
-  walletContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  walletInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.background.secondary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-  },
-  walletAddress: {
-    color: colors.text.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: "500",
-  },
-  logoutButton: {
-    padding: spacing.xs,
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  loadingText: {
-    color: colors.text.secondary,
-    fontSize: fontSize.sm,
-  },
-});

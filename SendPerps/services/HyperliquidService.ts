@@ -1,58 +1,22 @@
-export interface PerpsData {
-  id: string;
-  rank: number;
-  symbol: string;
-  name: string;
-  leverage: string;
-  volume: string;
-  iconUrl?: string;
-}
+import { 
+  PerpsData, 
+  HyperliquidPosition, 
+  HyperliquidBalance,
+  HyperliquidSpotBalance,
+  MetaResponse,
+  AssetContext,
+  CandleData
+} from '../types/hyperliquid';
+import { formatVolume } from '../utils/formatting';
+import { getCoinIcon, getAssetName, getIntervalMs } from '../utils/crypto';
 
-export interface HyperliquidPosition {
-  coin: string;
-  size: string;
-  entryPx: string;
-  pnl: string;
-  unrealizedPnl: string;
-  isLong: boolean;
-}
-
-export interface HyperliquidBalance {
-  totalValue: string;
-  availableBalance: string;
-}
-
-interface MetaResponse {
-  universe: Array<{
-    name: string;
-    szDecimals: number;
-    maxLeverage: number;
-    onlyIsolated?: boolean;
-    isDelisted?: boolean;
-  }>;
-  marginTables: Array<[number, any]>;
-}
-
-interface AssetContext {
-  dayNtlVlm: string;
-  funding: string;
-  impactPxs: [string, string];
-  markPx: string;
-  midPx: string;
-  openInterest: string;
-  oraclePx: string;
-  premium: string;
-  prevDayPx: string;
-}
-
-export interface CandleData {
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
+export { 
+  PerpsData, 
+  HyperliquidPosition, 
+  HyperliquidBalance,
+  HyperliquidSpotBalance,
+  CandleData 
+};
 
 export class HyperliquidService {
   private baseUrl: string;
@@ -60,15 +24,15 @@ export class HyperliquidService {
   private priceConnections: Map<string, WebSocket> = new Map();
   private candleConnections: Map<string, WebSocket> = new Map();
   private candleCallbacks: Map<string, (candle: CandleData, isSnapshot?: boolean, index?: number, total?: number) => void> = new Map();
-
   constructor() {
+    // Always use mainnet endpoints
     this.baseUrl = 'https://api.hyperliquid.xyz';
     this.websocketUrl = 'wss://api.hyperliquid.xyz/ws';
+    console.log('HyperliquidService initialized with MAINNET', this.baseUrl);
   }
 
-  // init wallet
-  public initializeWallet(walletAddress: string) {
-  }
+
+
 
   // api call
   private async apiCall(requestBody: any): Promise<any> {
@@ -118,14 +82,15 @@ export class HyperliquidService {
           }
 
           const volume = parseFloat(assetCtx.dayNtlVlm);
-          const formattedVolume = this.formatVolume(volume);          const item: PerpsData = {
+          const formattedVolume = formatVolume(volume);
+          const item: PerpsData = {
             id: (index + 1).toString(),
             rank: index + 1,
             symbol: `${asset.name}-USD`,
-            name: this.getAssetName(asset.name),
+            name: getAssetName(asset.name),
             leverage: `${asset.maxLeverage}x`,
             volume: formattedVolume,
-            iconUrl: this.getCoinIcon(asset.name),
+            iconUrl: getCoinIcon(asset.name),
           };
           return item;
         })
@@ -139,19 +104,79 @@ export class HyperliquidService {
   // get user balance
   public async getUserBalance(userAddress: string): Promise<HyperliquidBalance> {
     try {
-      const clearinghouseState = await this.apiCall({
+      const requestBody = {
         type: 'clearinghouseState',
         user: userAddress
-      });      return {
-        totalValue: clearinghouseState.marginSummary.accountValue,
-        availableBalance: clearinghouseState.withdrawable,
+      };
+      console.log('Fetching balance:', { address: userAddress, type: 'clearinghouseState' });
+      
+      const clearinghouseState = await this.apiCall(requestBody);
+      
+      
+      // Extract key values
+      const marginSummary = clearinghouseState.marginSummary || {};
+      const accountValue = marginSummary.accountValue || '0';
+      const withdrawable = clearinghouseState.withdrawable || '0';
+      
+      console.log('Account summary:', { 
+        value: accountValue, 
+        available: withdrawable,
+        marginUsed: marginSummary.totalMarginUsed || '0',
+        positionValue: marginSummary.totalNtlPos || '0'
+      });
+      
+      // Check if there are any positions
+      if (clearinghouseState.assetPositions && clearinghouseState.assetPositions.length > 0) {
+        console.log('Active Positions:', clearinghouseState.assetPositions.length);
+        clearinghouseState.assetPositions.forEach((pos: any, index: number) => {
+          console.log(`Position ${index + 1}:`, {
+            coin: pos.position?.coin,
+            size: pos.position?.szi,
+            entryPrice: pos.position?.entryPx,
+            unrealizedPnl: pos.position?.unrealizedPnl
+          });
+        });
+      } else {
+        console.log('No active positions');
+      }
+      
+      
+      return {
+        totalValue: accountValue,
+        availableBalance: withdrawable,
       };
     } catch (error) {
-      console.error('failed to fetch balance:', error);
+      console.error('=== BALANCE FETCH ERROR ===');
+      console.error('Failed to fetch balance for address:', userAddress);
+      console.error('Error details:', error);
       return {
         totalValue: '0',
         availableBalance: '0',
       };
+    }
+  }
+
+  // get spot balance
+  public async getSpotBalance(userAddress: string): Promise<HyperliquidSpotBalance[]> {
+    try {
+      const requestBody = {
+        type: 'spotClearinghouseState',
+        user: userAddress
+      };
+      console.log('Fetching spot balance:', { address: userAddress, type: 'spotClearinghouseState' });
+      
+      const spotState = await this.apiCall(requestBody);
+      
+      if (spotState && spotState.balances) {
+        console.log('Spot balances:', spotState.balances);
+        return spotState.balances;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch spot balance for address:', userAddress);
+      console.error('Spot balance error:', error);
+      return [];
     }
   }
 
@@ -205,7 +230,7 @@ export class HyperliquidService {
     try {
       // calc time range (50 candles)
       const now = Date.now();
-      const intervalMs = this.getIntervalMs(interval);
+      const intervalMs = getIntervalMs(interval);
       const candleCount = 50;
       
       if (!endTime) {
@@ -248,26 +273,6 @@ export class HyperliquidService {
     }
   }
   
-  // get interval ms
-  private getIntervalMs(interval: string): number {
-    const intervals: { [key: string]: number } = {
-      '1m': 60 * 1000,
-      '3m': 3 * 60 * 1000,
-      '5m': 5 * 60 * 1000,
-      '15m': 15 * 60 * 1000,
-      '30m': 30 * 60 * 1000,
-      '1h': 60 * 60 * 1000,
-      '2h': 2 * 60 * 60 * 1000,
-      '4h': 4 * 60 * 60 * 1000,
-      '8h': 8 * 60 * 60 * 1000,
-      '12h': 12 * 60 * 60 * 1000,
-      '1d': 24 * 60 * 60 * 1000,
-      '3d': 3 * 24 * 60 * 60 * 1000,
-      '1w': 7 * 24 * 60 * 60 * 1000,
-      '1M': 30 * 24 * 60 * 60 * 1000
-    };
-    return intervals[interval] || 60 * 1000;
-  }
 
   // price ws subscription
   public subscribeToPrice(coin: string, callback: (price: number) => void): void {
@@ -501,76 +506,7 @@ export class HyperliquidService {
     }
   }
 
-  // format volume
-  private formatVolume(volume: number): string {
-    if (volume >= 1e9) {
-      return `$${(volume / 1e9).toFixed(1)}B`;
-    } else if (volume >= 1e6) {
-      return `$${(volume / 1e6).toFixed(0)}M`;
-    } else if (volume >= 1e3) {
-      return `$${(volume / 1e3).toFixed(0)}K`;
-    } else {
-      return `$${volume.toFixed(0)}`;
-    }
-  }
+}
 
-  // get icon url
-  private getCoinIcon(symbol: string): string | undefined {
-    const iconMappings: { [key: string]: string } = {
-      'BTC': 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
-      'ETH': 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-      'SOL': 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
-      'DOGE': 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
-      'XRP': 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',
-      'ADA': 'https://assets.coingecko.com/coins/images/975/small/cardano.png',
-      'AVAX': 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
-      'MATIC': 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png',
-      'DOT': 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
-      'UNI': 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png',
-      'LINK': 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
-      'ATOM': 'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png',
-      'HYPE': 'https://assets.coingecko.com/coins/images/34019/small/hyperliquid.png',
-      'LTC': 'https://assets.coingecko.com/coins/images/2/small/litecoin.png',
-      'BCH': 'https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png',
-      'NEAR': 'https://assets.coingecko.com/coins/images/10365/small/near_icon.png',
-      'FTM': 'https://assets.coingecko.com/coins/images/4001/small/Fantom_round.png',
-      'ALGO': 'https://assets.coingecko.com/coins/images/4380/small/download.png',
-      'ICP': 'https://assets.coingecko.com/coins/images/14495/small/Internet_Computer_logo.png',
-      'VET': 'https://assets.coingecko.com/coins/images/1167/small/VeChain-Logo-768x725.png',
-      'TRX': 'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png',
-      'ETC': 'https://assets.coingecko.com/coins/images/453/small/ethereum-classic-logo.png',
-      'XLM': 'https://assets.coingecko.com/coins/images/100/small/Stellar_symbol_black_RGB.png',
-      'AAVE': 'https://assets.coingecko.com/coins/images/12645/small/AAVE.png',
-      'MKR': 'https://assets.coingecko.com/coins/images/1364/small/Mark_Maker.png',
-      'COMP': 'https://assets.coingecko.com/coins/images/10775/small/COMP.png',
-      'SUSHI': 'https://assets.coingecko.com/coins/images/12271/small/512x512_Logo_no_chop.png',
-      'YFI': 'https://assets.coingecko.com/coins/images/11849/small/yfi-192x192.png',
-      'SNX': 'https://assets.coingecko.com/coins/images/3406/small/SNX.png',
-      '1INCH': 'https://assets.coingecko.com/coins/images/13469/small/1inch-token.png',
-      'CRV': 'https://assets.coingecko.com/coins/images/12124/small/Curve.png',
-    };
-    
-    return iconMappings[symbol];
-  }
-
-  // get asset name
-  private getAssetName(symbol: string): string {
-    const names: { [key: string]: string } = {
-      'BTC': 'Bitcoin',
-      'ETH': 'Ethereum', 
-      'SOL': 'Solana',
-      'DOGE': 'Dogecoin',
-      'XRP': 'Ripple',
-      'ADA': 'Cardano',
-      'AVAX': 'Avalanche',
-      'MATIC': 'Polygon',
-      'DOT': 'Polkadot',
-      'UNI': 'Uniswap',
-      'LINK': 'Chainlink',
-      'ATOM': 'Cosmos',
-      'HYPE': 'Hyperliquid',
-    };
-    return names[symbol] || symbol;
-  }
-}// singleton
+// singleton - using MAINNET only
 export const hyperliquidService = new HyperliquidService();
