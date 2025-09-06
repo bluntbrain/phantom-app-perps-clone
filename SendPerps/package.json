@@ -15,6 +15,7 @@
     "@expo-google-fonts/inter": "^0.4.1",
     "@expo/metro-config": "^0.20.17",
     "@expo/vector-icons": "^14.1.0",
+    "@nktkas/hyperliquid": "^0.16.0",
     "@privy-io/expo": "^0.58.6",
     "@privy-io/expo-native-extensions": "^0.0.5",
     "@react-navigation/bottom-tabs": "^7.3.10",
@@ -22,6 +23,7 @@
     "@react-navigation/native": "^7.1.6",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
+    "event-target-polyfill": "^0.0.4",
     "expo": "~53.0.22",
     "expo-apple-authentication": "^7.2.4",
     "expo-application": "^6.1.5",
@@ -57,7 +59,7 @@
     "react-native-webview": "13.13.5",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5",
-    "viem": "^2.36.0"
+    "viem": "^2.37.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

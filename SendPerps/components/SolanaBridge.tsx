@@ -27,6 +27,7 @@ interface SolanaBridgeProps {
 
 type StepType = "confirm" | "sending" | "processing" | "complete";
 
+// solana bridge modal component for hyperunit deposits
 export const SolanaBridge: React.FC<SolanaBridgeProps> = ({
   visible,
   amount,
@@ -46,7 +47,7 @@ export const SolanaBridge: React.FC<SolanaBridgeProps> = ({
 
   useEffect(() => {
     if (visible) {
-      // Load fee estimates only when modal opens
+      // load fee estimates when modal opens
       const loadFees = async () => {
         try {
           const fees = await hyperUnitService.getFeeEstimates();
@@ -70,16 +71,16 @@ export const SolanaBridge: React.FC<SolanaBridgeProps> = ({
   const calculateFees = () => {
     const amountNum = parseFloat(amount) || 0;
 
-    // Get actual network fee from HyperUnit API
-    let networkFee = 0.000008; // Default fallback (typical Solana fee)
+    // get actual network fee from hyperunit api
+    let networkFee = 0.000008; // default solana fee
     if (feeEstimates?.solana?.['solana-depositFee']) {
       // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
       const lamports = feeEstimates.solana['solana-depositFee'];
       networkFee = lamports / 1_000_000_000; // Convert to SOL
     }
 
-    // HyperUnit doesn't charge additional fees beyond network fees
-    // The deposit fee is just the Solana network fee
+    // hyperunit only charges network fees
+    // no additional deposit fees
     const depositFee = networkFee;
 
     // Total fees
@@ -100,7 +101,7 @@ export const SolanaBridge: React.FC<SolanaBridgeProps> = ({
   };
 
   const getHyperliquidAddress = (): string => {
-    // Use wallet address from hook
+    // use privy wallet address as destination
     return walletAddress || "";
   };
 
@@ -139,7 +140,7 @@ export const SolanaBridge: React.FC<SolanaBridgeProps> = ({
 
     setLoading(true);
     try {
-      // Generate the deposit address for the user's Hyperliquid address
+      // generate hyperunit deposit address for sol to hyperliquid
       const bridgeData = await hyperUnitService.generateDepositAddress(
         "solana",
         "sol",
@@ -366,7 +367,7 @@ export const SolanaBridge: React.FC<SolanaBridgeProps> = ({
             color={colors.accent.orange}
           />
           <Text style={styles.warningText}>
-            You're bridging on Mainnet. This transaction involves real funds.
+            You&apos;re bridging on Mainnet. This transaction involves real funds.
           </Text>
         </View>
 

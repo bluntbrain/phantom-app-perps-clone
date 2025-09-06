@@ -64,6 +64,43 @@ export const homeStyles = StyleSheet.create({
   balanceBreakdown: {
     marginTop: spacing.xs,
   },
+  transferButton: {
+    backgroundColor: colors.accent.purple,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
+  },
+  transferButtonText: {
+    color: colors.text.primary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  quickActionTitle: {
+    color: colors.text.primary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+  },
+  quickActionSubtitle: {
+    color: colors.text.secondary,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+  },
   filterContainer: {
     flexDirection: "row",
     paddingHorizontal: spacing.md,

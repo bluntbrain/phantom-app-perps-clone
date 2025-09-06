@@ -1,3 +1,4 @@
+import 'event-target-polyfill';
 import { 
   PerpsData, 
   HyperliquidPosition, 
@@ -9,6 +10,7 @@ import {
 } from '../types/hyperliquid';
 import { formatVolume } from '../utils/formatting';
 import { getCoinIcon, getAssetName, getIntervalMs } from '../utils/crypto';
+import { hyperliquidSDKService, type WalletProvider } from './HyperliquidSDKService';
 
 export { 
   PerpsData, 
@@ -25,19 +27,19 @@ export class HyperliquidService {
   private candleConnections: Map<string, WebSocket> = new Map();
   private candleCallbacks: Map<string, (candle: CandleData, isSnapshot?: boolean, index?: number, total?: number) => void> = new Map();
   constructor() {
-    // Always use mainnet endpoints
     this.baseUrl = 'https://api.hyperliquid.xyz';
     this.websocketUrl = 'wss://api.hyperliquid.xyz/ws';
-    console.log('HyperliquidService initialized with MAINNET', this.baseUrl);
+  }
+
+  public async setupSDK(walletProvider: WalletProvider) {
+    await hyperliquidSDKService.setProvider(walletProvider);
   }
 
 
 
 
-  // api call
   private async apiCall(requestBody: any): Promise<any> {
     try {
-      
       const response = await fetch(`${this.baseUrl}/info`, {
         method: 'POST',
         headers: {
@@ -47,18 +49,20 @@ export class HyperliquidService {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      
       return data;
     } catch (error) {
-      console.error('api call failed:', error);
+      console.error('api request failed:', error);
       throw error;
     }
   }
 
-  // get metadata
+  // fetch perpetuals metadata and universe
   private async getMeta(): Promise<MetaResponse> {
     return await this.apiCall({ type: 'meta' });
   }
@@ -68,11 +72,15 @@ export class HyperliquidService {
     return await this.apiCall({ type: 'metaAndAssetCtxs' });
   }
 
-  // get perps data
+  private async getSpotMetaAndAssetCtxs(): Promise<any> {
+    const requestBody = { type: 'spotMetaAndAssetCtxs' };
+    const result = await this.apiCall(requestBody);
+    return result;
+  }
+
   public async getPerpsData(): Promise<PerpsData[]> {
     try {
-      // get meta and contexts
-      const [meta, assetCtxs] = await this.getMetaAndAssetCtxs();      // transform to perps format
+      const [meta, assetCtxs] = await this.getMetaAndAssetCtxs();
       const perpsData: PerpsData[] = meta.universe
         .map((asset, index) => {
           const assetCtx = assetCtxs[index];
@@ -101,7 +109,7 @@ export class HyperliquidService {
     }
   }
 
-  // get user balance
+  // fetch perp account balance for user
   public async getUserBalance(userAddress: string): Promise<HyperliquidBalance> {
     try {
       const requestBody = {
@@ -156,7 +164,7 @@ export class HyperliquidService {
     }
   }
 
-  // get spot balance
+  // fetch spot wallet balances including usol and usdc
   public async getSpotBalance(userAddress: string): Promise<HyperliquidSpotBalance[]> {
     try {
       const requestBody = {
@@ -326,7 +334,7 @@ export class HyperliquidService {
         }
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = () => {
         if (heartbeatInterval) {
           clearInterval(heartbeatInterval);
         }
@@ -451,7 +459,7 @@ export class HyperliquidService {
         }
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = () => {
         if (heartbeatInterval) {
           clearInterval(heartbeatInterval);
         }
@@ -485,12 +493,12 @@ export class HyperliquidService {
 
   // close all
   public closeAllConnections(): void {
-    this.priceConnections.forEach((ws, coin) => {
+    this.priceConnections.forEach((ws) => {
       ws.close();
     });
     this.priceConnections.clear();
 
-    this.candleConnections.forEach((ws, coin) => {
+    this.candleConnections.forEach((ws) => {
       ws.close();
     });
     this.candleConnections.clear();
@@ -505,6 +513,256 @@ export class HyperliquidService {
       return null;
     }
   }
+
+  // transfer usdc between spot and perp accounts (mainnet only supports usdc)
+  public async transferBetweenAccounts(amount: string, toPerp: boolean, userAddress?: string): Promise<any> {
+    try {
+      if (!userAddress) {
+        throw new Error('User address is required for transfer');
+      }
+      
+      const spotBalances = await this.getSpotBalance(userAddress);
+      const requestedAmount = parseFloat(amount);
+      const usdcBalance = spotBalances.find(balance => balance.coin === 'USDC');
+      
+      if (!usdcBalance || parseFloat(usdcBalance.total) < requestedAmount) {
+        const errorMsg = `Insufficient USDC balance for transfer. Current USDC: ${usdcBalance?.total || '0'}, Required: ${amount}`;
+        throw new Error(errorMsg);
+      }
+      
+      const result = await hyperliquidSDKService.usdClassTransfer({
+        amount: amount,
+        toPerp: toPerp
+      });
+      
+      console.log('[Transfer] Completed transfer:', { amount, toPerp, userAddress }, result);
+      return result;
+    } catch (error) {
+      console.error('[Transfer] Failed:', { amount, toPerp, userAddress }, error);
+      throw error;
+    }
+  }
+
+  // find spot asset by symbol (e.g., "SOL/USDC") or auto-detect USOL pair
+  // (Currently unused - logic inlined in placeSpotOrder)
+  /*
+  private async getSpotAssetIndex(symbol: string): Promise<number> {
+    try {
+      const [spotMeta] = await this.getSpotMetaAndAssetCtxs();
+      
+      console.log('SPOT ASSET DEBUG');
+      console.log('Requested symbol:', symbol);
+      console.log('Available tokens:', spotMeta.tokens.map((token: any) => ({
+        name: token.name,
+        index: token.index
+      })));
+      console.log('Available spot pairs:', spotMeta.universe.map((asset: any) => ({
+        name: asset.name,
+        tokens: asset.tokens,
+        index: asset.index
+      })));
+      
+      // First try exact match
+      let assetIndex = spotMeta.universe.findIndex((asset: any) => {
+        return asset.name === symbol;
+      });
+      
+      console.log('Exact match result for', symbol, ':', assetIndex);
+      
+      // If not found and looking for any SOL-related pair, try multiple strategies
+      if (assetIndex === -1 && (symbol === 'SOL/USDC' || symbol === 'USOL/USDC')) {
+        console.log('Trying to find SOL/USDC equivalent...');
+        
+        // Strategy 1: Look for USOL/USDC by name
+        assetIndex = spotMeta.universe.findIndex((asset: any) => {
+          return asset.name === 'USOL/USDC';
+        });
+        console.log('USOL/USDC name match:', assetIndex);
+        
+        // Strategy 2: Look for any pair containing USOL and USDC tokens
+        if (assetIndex === -1) {
+          const usdcToken = spotMeta.tokens.find((token: any) => token.name === 'USDC');
+          const usolToken = spotMeta.tokens.find((token: any) => token.name === 'USOL');
+          
+          console.log('Found USDC token:', usdcToken);
+          console.log('Found USOL token:', usolToken);
+          
+          if (usdcToken && usolToken) {
+            assetIndex = spotMeta.universe.findIndex((asset: any) => {
+              // Check if this pair contains both USOL and USDC tokens
+              return asset.tokens.includes(usolToken.index) && asset.tokens.includes(usdcToken.index);
+            });
+            console.log('Token-based match result:', assetIndex);
+            
+            if (assetIndex !== -1) {
+              console.log('Found USOL/USDC pair:', spotMeta.universe[assetIndex]);
+            }
+          }
+        }
+        
+        // Strategy 3: Look for any SOL-related pair
+        if (assetIndex === -1) {
+          assetIndex = spotMeta.universe.findIndex((asset: any) => {
+            return asset.name.includes('SOL') && asset.name.includes('USDC');
+          });
+          console.log('SOL-USDC string match result:', assetIndex);
+        }
+      }
+      
+      if (assetIndex === -1) {
+        // List available pairs for debugging
+        const availablePairs = spotMeta.universe.map((asset: any) => asset.name).join(', ');
+        console.log('ASSET NOT FOUND');
+        console.log('Available pairs:', availablePairs);
+        throw new Error(`Spot asset ${symbol} not found. Available pairs: ${availablePairs}`);
+      }
+      
+      console.log('Final asset index:', assetIndex);
+      console.log('Final asset details:', spotMeta.universe[assetIndex]);
+      console.log('END DEBUG');
+      
+      // For spot assets, use 10000 + index
+      return 10000 + assetIndex;
+    } catch (error) {
+      console.error('Failed to get spot asset index:', error);
+      throw error;
+    }
+  }
+  */
+
+  // get current spot price for a trading pair
+  public async getSpotPrice(symbol: string): Promise<number> {
+    try {
+      const [, assetCtxs] = await this.getSpotMetaAndAssetCtxs();
+      const [spotMeta] = await this.getSpotMetaAndAssetCtxs();
+      
+      const assetIndex = spotMeta.universe.findIndex((asset: any) => {
+        return asset.name === symbol || `${asset.tokens[0]}/${asset.tokens[1]}` === symbol;
+      });
+      
+      if (assetIndex === -1) {
+        throw new Error(`Spot asset ${symbol} not found`);
+      }
+      
+      const assetCtx = assetCtxs[assetIndex];
+      if (!assetCtx) {
+        throw new Error(`Price data for ${symbol} not available`);
+      }
+      
+      return parseFloat(assetCtx.markPx || assetCtx.midPx || '0');
+    } catch (error) {
+      console.error('Failed to get spot price:', symbol, error);
+      throw error;
+    }
+  }
+
+  // place spot order for token swaps (e.g., usol to usdc)
+  public async placeSpotOrder(orderParams: {
+    symbol: string; // e.g., "USOL/USDC"
+    isBuy: boolean; // false for selling USOL to get USDC
+    usdValue?: string; // USD value to swap (e.g., "10") - optional
+    solAmount?: string; // Direct SOL/USOL amount (e.g., "0.1") - optional
+    slippageTolerance?: number; // default 0.5%
+    userAddress?: string; // optional user address for signing
+  }): Promise<any> {
+    try {
+      // Use SDK to find asset and get proper decimals
+      const { assetIndex, spotAssetIndex, priceDecimals, sizeDecimals, currentPrice } = await hyperliquidSDKService.findSpotAssetWithTickSize(orderParams.symbol);
+      
+      // Determine size and format with proper decimals
+      let rawSize: number;
+      if (orderParams.solAmount) {
+        rawSize = parseFloat(orderParams.solAmount);
+      } else if (orderParams.usdValue) {
+        const usdValue = parseFloat(orderParams.usdValue);
+        rawSize = usdValue / currentPrice;
+      } else {
+        throw new Error('Either solAmount or usdValue must be provided');
+      }
+      
+      const size = hyperliquidSDKService.formatSizeWithDecimals(rawSize, sizeDecimals);
+      
+      // Set price with slippage
+      const slippage = orderParams.slippageTolerance || 0.5;
+      let rawPrice: number;
+      
+      if (orderParams.isBuy) {
+        rawPrice = currentPrice * (1 + slippage / 100);
+      } else {
+        rawPrice = currentPrice * (1 - slippage / 100);
+      }
+      
+      // Use SDK to format price with proper decimals
+      const price = hyperliquidSDKService.formatPriceWithDecimals(rawPrice, priceDecimals);
+      
+      const orderData = {
+        a: spotAssetIndex,
+        b: orderParams.isBuy,
+        p: price,
+        s: size,
+        r: false,
+        t: { limit: { tif: "Ioc" as "Ioc" } }
+      };
+      
+      const result = await hyperliquidSDKService.order({
+        orders: [orderData],
+        grouping: "na"
+      });
+      
+      console.log('[Spot Order] Completed:', orderParams, { assetIndex, spotAssetIndex, currentPrice, size, price, priceDecimals, sizeDecimals }, result);
+      return result;
+    } catch (error) {
+      console.error('[Spot Order] Failed:', orderParams, error);
+      throw error;
+    }
+  }
+
+  // place an order
+  public async placeOrder(orderParams: {
+    coin: string;
+    isBuy: boolean;
+    size: string;
+    price?: string;
+    orderType: 'limit' | 'market';
+    reduceOnly?: boolean;
+    postOnly?: boolean;
+  }): Promise<any> {
+    try {
+      // Find asset index for the coin
+      const meta = await this.getMeta();
+      const assetIndex = meta.universe.findIndex(asset => asset.name === orderParams.coin);
+      
+      if (assetIndex === -1) {
+        throw new Error(`Asset ${orderParams.coin} not found`);
+      }
+
+      const orderData = {
+        a: assetIndex, // asset index
+        b: orderParams.isBuy, // is buy
+        p: orderParams.price || "0", // price (0 for market orders)
+        s: orderParams.size, // size
+        r: orderParams.reduceOnly || false, // reduce only
+        t: {
+          limit: {
+            tif: (orderParams.orderType === 'market' ? "Ioc" : 
+                 orderParams.postOnly ? "Alo" : "Gtc") as "Ioc" | "Gtc" | "Alo"
+          }
+        }
+      };
+
+      const result = await hyperliquidSDKService.order({
+        orders: [orderData],
+        grouping: "na" as const
+      });
+      
+      console.log('[Order] Completed:', orderParams, { assetIndex, orderData }, result);
+      return result;
+    } catch (error) {
+      console.error('[Order] Failed:', orderParams, error);
+      throw error;
+    }
+  }
+
 
 }
 

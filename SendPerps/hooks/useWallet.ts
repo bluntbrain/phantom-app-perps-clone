@@ -90,6 +90,8 @@ export function useWalletBalance() {
   const { address } = useWallet();
   const [balance, setBalance] = useState(0);
   const [spotBalance, setSpotBalance] = useState(0);
+  const [usolBalance, setUsolBalance] = useState(0);
+  const [usdcBalance, setUsdcBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -114,27 +116,39 @@ export function useWalletBalance() {
         const perpAvailable = parseFloat(perpBalanceData.availableBalance) || 0;
         setBalance(perpAvailable);
         
-        // Spot balance (sum of all spot token balances in USD)
+        // Process individual token balances
         let totalSpotValue = 0;
+        let usdc = 0;
+        let usol = 0;
+        
         if (spotBalances && Array.isArray(spotBalances)) {
           spotBalances.forEach(tokenBalance => {
             if (tokenBalance.coin === 'USDC') {
               // USDC is 1:1 with USD
-              totalSpotValue += parseFloat(tokenBalance.total) || 0;
+              const usdcAmount = parseFloat(tokenBalance.total) || 0;
+              usdc = usdcAmount;
+              totalSpotValue += usdcAmount;
             } else if (tokenBalance.coin === 'USOL') {
-              // USOL (wrapped SOL) - use the entryNtl value which represents USD value
+              // USOL (wrapped SOL) - store token amount and add USD value
+              const usolTokenAmount = parseFloat(tokenBalance.total) || 0;
               const usdValue = parseFloat(tokenBalance.entryNtl) || 0;
-              console.log(`USOL balance: ${tokenBalance.total} USOL = $${usdValue}`);
+              console.log(`USOL balance: ${usolTokenAmount} USOL = $${usdValue}`);
+              usol = usolTokenAmount;
               totalSpotValue += usdValue;
             }
           });
         }
+        
+        setUsdcBalance(usdc);
+        setUsolBalance(usol);
         setSpotBalance(totalSpotValue);
         
       } catch (error) {
         console.error("Balance fetch error:", error);
         setBalance(0);
         setSpotBalance(0);
+        setUsdcBalance(0);
+        setUsolBalance(0);
       } finally {
         setIsLoading(false);
       }
@@ -147,8 +161,10 @@ export function useWalletBalance() {
   }, [address]);
 
   return { 
-    balance, // Perp balance
-    spotBalance, // Spot balance
+    balance, // Perp balance (USDC)
+    spotBalance, // Spot balance total (USD value)
+    usdcBalance, // USDC balance (individual token)
+    usolBalance, // USOL balance (individual token amount)
     totalBalance: balance + spotBalance, // Combined
     isLoading 
   };

@@ -7,7 +7,7 @@ import { spacing } from "../constants/spacing";
 import { haptics } from "../utils/haptics";
 
 interface BottomNavigationProps {
-  activeTab?: "home" | "refresh" | "history" | "search";
+  activeTab?: "home" | "perp" | "history" | "search";
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
@@ -18,6 +18,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   // determine active tab based on current route
   const getActiveTab = () => {
     if (activeTab) return activeTab;
+    if (pathname.includes("perp")) return "perp";
     if (pathname.includes("history")) return "history";
     if (pathname.includes("home") || pathname === "/") return "home";
     return "home";
@@ -32,12 +33,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       case "home":
         router.push("/home");
         break;
+      case "perp":
+        router.push("/perp");
+        break;
       case "history":
         router.push("/history");
-        break;
-      case "refresh":
-        // Trigger refresh action
-        console.log("Refresh pressed");
         break;
       case "search":
         // Navigate to search or show search modal
@@ -61,9 +61,9 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => handleTabPress("refresh")}
+        onPress={() => handleTabPress("perp")}
       >
-        <Feather name="refresh-cw" size={24} color={getIconColor("refresh")} />
+        <Feather name="trending-up" size={24} color={getIconColor("perp")} />
       </TouchableOpacity>
 
       <TouchableOpacity
