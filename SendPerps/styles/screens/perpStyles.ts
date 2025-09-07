@@ -9,14 +9,26 @@ export const perpStyles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  placeholder: {
+    width: 32,
+    height: 32,
   },
   title: {
     color: colors.text.primary,
     fontSize: fontSize.xl,
     fontWeight: "600",
+    flex: 1,
   },
   balanceContainer: {
     alignItems: 'center',
@@ -103,7 +115,8 @@ export const perpStyles = StyleSheet.create({
     fontWeight: "500",
   },
   sortIcon: {
-    color: colors.text.accent,
+    color: colors.text.secondary,
+    fontSize: fontSize.md,
   },
   loadingContainer: {
     flex: 1,

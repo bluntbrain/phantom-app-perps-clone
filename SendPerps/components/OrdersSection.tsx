@@ -11,6 +11,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../constants/colors";
 import { useWalletSigning } from "../hooks/useWalletSigning";
 import { fontSize } from "@/constants/spacing";
+import Toast from "react-native-toast-message";
+import { router } from "expo-router";
 
 interface Order {
   coin: string;
@@ -82,14 +84,26 @@ export function OrdersSection({
               const result = await signAndCancelOrder(assetIndex, order.oid);
 
               if (result.status === "ok") {
-                Alert.alert("Success", "Order cancelled successfully");
+                Toast.show({
+                  type: "success",
+                  text1: "Order Cancelled",
+                  text2: `${order.side === "A" ? "Buy" : "Sell"} order for ${
+                    order.coin
+                  } cancelled successfully`,
+                  visibilityTime: 3000,
+                });
                 onRefresh();
               } else {
                 throw new Error(result.response || "Cancel failed");
               }
             } catch (error) {
               console.error("cancel order failed:", error);
-              Alert.alert("Error", "Failed to cancel order");
+              Toast.show({
+                type: "error",
+                text1: "Cancel Failed",
+                text2: "Failed to cancel order. Please try again.",
+                visibilityTime: 4000,
+              });
             }
           },
         },
@@ -98,7 +112,18 @@ export function OrdersSection({
   };
 
   const handleModifyOrder = (order: Order) => {
-    Alert.alert("Modify Order", "Order modification coming soon");
+    // Navigate to trading screen for the specific coin to modify the order
+    router.push({
+      pathname: "/trading",
+      params: {
+        symbol: `${order.coin}-USD`,
+        name: order.coin,
+        modifyOrderId: order.oid.toString(),
+        modifyOrderPrice: order.limitPx,
+        modifyOrderSize: order.sz,
+        modifyOrderSide: order.side === "A" ? "buy" : "sell",
+      },
+    });
   };
 
   const formatPrice = (price: string) => {
@@ -172,8 +197,8 @@ export function OrdersSection({
           style={[styles.actionButton, styles.cancelButton]}
           onPress={() => handleCancelOrder(item)}
         >
-          <Ionicons name="close-outline" size={16} color={colors.accent.red} />
-          <Text style={[styles.actionButtonText, { color: colors.accent.red }]}>
+          <Ionicons name="close-outline" size={16} color={colors.text.black} />
+          <Text style={[styles.actionButtonText, { color: colors.text.black }]}>
             Cancel
           </Text>
         </TouchableOpacity>
@@ -217,7 +242,7 @@ export function OrdersSection({
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
+      {isLoading && orders.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={colors.text.accent} />
           <Text style={styles.loadingText}>Loading orders...</Text>
@@ -258,7 +283,7 @@ const styles = {
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: "600" as const,
     color: colors.text.primary,
   },

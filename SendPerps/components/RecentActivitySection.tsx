@@ -199,7 +199,8 @@ export function RecentActivitySection({
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
+      {isLoading &&
+      (!accountSummary || accountSummary.assetPositions.length === 0) ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={colors.text.accent} />
           <Text style={styles.loadingText}>Loading positions...</Text>
@@ -265,7 +266,7 @@ const styles = {
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: "600" as const,
     color: colors.text.primary,
   },

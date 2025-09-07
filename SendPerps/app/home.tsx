@@ -21,6 +21,7 @@ import { useWalletSigning } from "../hooks/useWalletSigning";
 import { useHyperliquidPerpData } from "../hooks/useHyperliquidPerp";
 import { OrdersSection } from "../components/OrdersSection";
 import { RecentActivitySection } from "../components/RecentActivitySection";
+import { fontSize } from "@/constants/spacing";
 
 export default function HomeScreen() {
   const { user, logout, isReady } = usePrivy();
@@ -62,7 +63,11 @@ export default function HomeScreen() {
     }
   }, [refetchBalance, refetchPerpData]);
 
-  if (!isReady) {
+  // show main loading screen only for initial app load
+  if (
+    !isReady ||
+    (balanceLoading && perpDataLoading && !balance && !accountSummary.data)
+  ) {
     return (
       <View
         style={{
@@ -100,21 +105,42 @@ export default function HomeScreen() {
     return "No wallet";
   };
 
+  // generate a consistent random avatar color based on wallet address
+  const getAvatarColor = () => {
+    if (!address) return colors.background.secondary;
+
+    // generate a hash from the address
+    let hash = 0;
+    for (let i = 0; i < address.length; i++) {
+      hash = address.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // create a color from the hash
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 60%, 50%)`;
+  };
+
+  // get initials for the avatar
+  const getAvatarInitials = () => {
+    if (address) {
+      return address.slice(2, 4).toUpperCase(); // use first 2 chars after 0x
+    }
+    return "A1";
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.leftSection}>
-          <Text style={styles.title}>SendAI Perps</Text>
+          <View style={[styles.avatar, { backgroundColor: getAvatarColor() }]}>
+            <Text style={styles.avatarText}>{getAvatarInitials()}</Text>
+          </View>
+          <View style={styles.accountInfo}>
+            <Text style={styles.walletAddress}>{getWalletAddress()}</Text>
+            <Text style={styles.accountTitle}>Account 1</Text>
+          </View>
         </View>
         <View style={styles.walletContainer}>
-          <View style={styles.walletInfo}>
-            <Ionicons
-              name="wallet-outline"
-              size={16}
-              color={colors.text.secondary}
-            />
-            <Text style={styles.walletAddress}>{getWalletAddress()}</Text>
-          </View>
           {user && (
             <TouchableOpacity
               style={styles.logoutButton}
@@ -172,7 +198,28 @@ export default function HomeScreen() {
       >
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Perps</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              justifyContent: "space-between",
+            }}
+          >
+            <Text style={styles.sectionTitle}>Perps</Text>
+            <Text
+              onPress={() => router.push("/perp")}
+              style={{
+                color: colors.accent.purple,
+                marginBottom: 8,
+                fontSize: fontSize.md,
+                fontWeight: "500",
+              }}
+            >
+              Manage
+            </Text>
+          </View>
+
           <TouchableOpacity
             style={styles.quickActionCard}
             onPress={() => router.push("/perp")}

@@ -172,12 +172,44 @@ export const longshortStyles = StyleSheet.create({
     backgroundColor: colors.accent.red,
   },
   reviewButtonText: {
-    color: colors.text.primary,
+    color: colors.text.black,
     fontSize: fontSize.lg,
     fontWeight: '600',
   },
   reviewButtonErrorText: {
     color: colors.text.primary,
+  },
+
+  // Position Management Buttons
+  positionButtonsSection: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
+  },
+  positionButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  modifyButton: {
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+  },
+  closeLongButton: {
+    backgroundColor: colors.accent.red,
+  },
+  closeShortButton: {
+    backgroundColor: colors.accent.red,
+  },
+  positionButtonText: {
+    color: colors.text.primary,
+    fontSize: fontSize.lg,
+    fontWeight: '600',
   },
 
   disclosureSection: {

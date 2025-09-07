@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,12 +6,12 @@ import {
   Modal,
   Pressable,
   Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
-import * as Haptics from 'expo-haptics';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../constants/colors";
+import * as Haptics from "expo-haptics";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface ModifyPositionBottomSheetProps {
   visible: boolean;
@@ -26,7 +26,6 @@ export function ModifyPositionBottomSheet({
   onAddToPosition,
   onReducePosition,
 }: ModifyPositionBottomSheetProps) {
-
   const handleAddToPosition = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onAddToPosition();
@@ -53,7 +52,7 @@ export function ModifyPositionBottomSheet({
         <Pressable style={styles.container} onPress={() => {}}>
           {/* Handle Bar */}
           <View style={styles.handle} />
-          
+
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Modify Position</Text>
@@ -70,7 +69,7 @@ export function ModifyPositionBottomSheet({
               activeOpacity={0.7}
             >
               <View style={styles.optionContent}>
-                <Ionicons name="add-circle-outline" size={24} color={colors.accent.green} />
+                <Ionicons name="add" size={24} color={colors.text.secondary} />
                 <View style={styles.optionTextContainer}>
                   <Text style={styles.optionTitle}>Add to Position</Text>
                   <Text style={styles.optionDescription}>
@@ -78,7 +77,11 @@ export function ModifyPositionBottomSheet({
                   </Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.text.primary}
+              />
             </TouchableOpacity>
 
             <View style={styles.divider} />
@@ -89,7 +92,11 @@ export function ModifyPositionBottomSheet({
               activeOpacity={0.7}
             >
               <View style={styles.optionContent}>
-                <Ionicons name="remove-circle-outline" size={24} color={colors.accent.red} />
+                <Ionicons
+                  name="remove"
+                  size={24}
+                  color={colors.text.secondary}
+                />
                 <View style={styles.optionTextContainer}>
                   <Text style={styles.optionTitle}>Reduce Position</Text>
                   <Text style={styles.optionDescription}>
@@ -97,7 +104,11 @@ export function ModifyPositionBottomSheet({
                   </Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.text.primary}
+              />
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -109,8 +120,8 @@ export function ModifyPositionBottomSheet({
 const styles = {
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end' as const,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end" as const,
   },
   container: {
     backgroundColor: colors.background.primary,
@@ -124,40 +135,44 @@ const styles = {
     height: 4,
     backgroundColor: colors.text.secondary,
     borderRadius: 2,
-    alignSelf: 'center' as const,
+    alignSelf: "center" as const,
     marginTop: 8,
     marginBottom: 16,
   },
   header: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 20,
     marginBottom: 24,
   },
   title: {
     color: colors.text.primary,
     fontSize: 20,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   closeButton: {
     width: 32,
     height: 32,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   optionsContainer: {
     paddingHorizontal: 20,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 12,
+    marginHorizontal: 8,
+    paddingVertical: 2,
   },
   optionButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 16,
   },
   optionContent: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     flex: 1,
   },
   optionTextContainer: {
@@ -167,7 +182,7 @@ const styles = {
   optionTitle: {
     color: colors.text.primary,
     fontSize: 16,
-    fontWeight: '500' as const,
+    fontWeight: "500" as const,
     marginBottom: 4,
   },
   optionDescription: {

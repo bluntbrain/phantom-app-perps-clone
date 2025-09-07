@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { usePrivy } from "@privy-io/expo";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../constants/colors";
 import { haptics } from "../utils/haptics";
 import { PerpsCard } from "../components/PerpsCard";
@@ -36,14 +37,44 @@ export default function PerpScreen() {
     error: signingError,
   } = useWalletSigning();
 
-  const [selectedFilter, setSelectedFilter] = useState<"Volume" | "24h">(
-    "Volume"
-  );
   const [perpsData, setPerpsData] = useState<PerpsData[]>([]);
+  const [sortedPerpsData, setSortedPerpsData] = useState<PerpsData[]>([]);
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc"); // Start with descending
   const [loadingData, setLoadingData] = useState(false);
   const [addFundsVisible, setAddFundsVisible] = useState(false);
   const [addFundsMode, setAddFundsMode] = useState<"transfer" | "swap">(
     "transfer"
+  );
+
+  // helper function to parse volume string and convert to number for sorting
+  const parseVolume = React.useCallback((volumeStr: string): number => {
+    if (!volumeStr || volumeStr === "-" || volumeStr === "0") return 0;
+
+    const numStr = volumeStr.replace(/[^0-9.]/g, ""); // Remove non-numeric chars except decimal
+    const num = parseFloat(numStr);
+
+    if (volumeStr.includes("K")) return num * 1000;
+    if (volumeStr.includes("M")) return num * 1000000;
+    if (volumeStr.includes("B")) return num * 1000000000;
+
+    return num || 0;
+  }, []);
+
+  // sort perps data by volume
+  const sortByVolume = React.useCallback(
+    (data: PerpsData[], order: "desc" | "asc"): PerpsData[] => {
+      return [...data].sort((a, b) => {
+        const volumeA = parseVolume(a.volume);
+        const volumeB = parseVolume(b.volume);
+
+        if (order === "desc") {
+          return volumeB - volumeA; // High to low
+        } else {
+          return volumeA - volumeB; // Low to high
+        }
+      });
+    },
+    [parseVolume]
   );
 
   React.useEffect(() => {
@@ -54,6 +85,9 @@ export default function PerpScreen() {
           const realPerpsData = await hyperliquidService.getPerpsData();
           if (realPerpsData.length > 0) {
             setPerpsData(realPerpsData);
+            // initially sort by volume descending
+            const sorted = sortByVolume(realPerpsData, "desc");
+            setSortedPerpsData(sorted);
           }
         } catch (error) {
           console.error("data load failed:", error);
@@ -66,9 +100,17 @@ export default function PerpScreen() {
     loadRealData();
   }, [user]);
 
-  const handleFilterPress = (filter: "Volume" | "24h") => {
+  // re-sort when sort order changes
+  React.useEffect(() => {
+    if (perpsData.length > 0) {
+      const sorted = sortByVolume(perpsData, sortOrder);
+      setSortedPerpsData(sorted);
+    }
+  }, [perpsData, sortOrder]);
+
+  const handleVolumeSortPress = () => {
     haptics.selection();
-    setSelectedFilter(filter);
+    setSortOrder(sortOrder === "desc" ? "asc" : "desc");
   };
 
   const handlePerpsPress = (item: PerpsData) => {
@@ -279,9 +321,15 @@ export default function PerpScreen() {
     }
   };
 
-  const renderPerpsItem = ({ item }: { item: PerpsData }) => (
+  const renderPerpsItem = ({
+    item,
+    index,
+  }: {
+    item: PerpsData;
+    index: number;
+  }) => (
     <PerpsCard
-      rank={item.rank}
+      rank={index + 1}
       symbol={item.symbol}
       leverage={item.leverage}
       volume={item.volume}
@@ -294,10 +342,19 @@ export default function PerpScreen() {
     setAddFundsMode(mode);
   };
 
+  const handleBackPress = () => {
+    haptics.light();
+    router.push("/home");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+        </TouchableOpacity>
         <Text style={styles.title}>Perps</Text>
+        <View style={styles.placeholder} />
       </View>
 
       {/* Perp Balance Display */}
@@ -348,11 +405,18 @@ export default function PerpScreen() {
       <View style={styles.tableHeader}>
         <View style={styles.tableHeaderLeft}>
           <Text style={styles.tableHeaderText}>#</Text>
-          <Text style={styles.tableHeaderText}>Perps</Text>
+          <Text style={[styles.tableHeaderText, { marginLeft: 62 }]}>
+            Perps
+          </Text>
         </View>
-        <Text style={styles.tableHeaderText}>
-          Volume <Text style={styles.sortIcon}>↓</Text>
-        </Text>
+        <TouchableOpacity onPress={handleVolumeSortPress}>
+          <Text style={styles.tableHeaderText}>
+            Volume{"  "}
+            <Text style={styles.sortIcon}>
+              {sortOrder === "desc" ? "↓" : "↑"}
+            </Text>
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Perps List */}
@@ -363,7 +427,7 @@ export default function PerpScreen() {
         </View>
       ) : (
         <FlatList
-          data={perpsData}
+          data={sortedPerpsData}
           renderItem={renderPerpsItem}
           keyExtractor={(item) => item.id}
           style={styles.list}

@@ -18,7 +18,11 @@ import { BottomNavigation } from "../components/BottomNavigation";
 import { Ionicons } from "@expo/vector-icons";
 import { hyperliquidService } from "../services/HyperliquidService";
 import { tradingStyles as styles } from "../styles/screens/tradingStyles";
-import { useWallet, useWalletBalance, useUserPerpAccountSummary } from "../hooks";
+import {
+  useWallet,
+  useWalletBalance,
+  useUserPerpAccountSummary,
+} from "../hooks";
 import { ModifyPositionBottomSheet } from "../components/ModifyPositionBottomSheet";
 import { ClosePositionBottomSheet } from "../components/ClosePositionBottomSheet";
 
@@ -26,7 +30,11 @@ export default function TradingScreen() {
   // safe parameter extraction with error handling
   const params = useLocalSearchParams();
   const { address } = useWallet();
-  const { balance, isLoading: loadingBalance, refetch: refetchBalance } = useWalletBalance();
+  const {
+    balance,
+    isLoading: loadingBalance,
+    refetch: refetchBalance,
+  } = useWalletBalance();
 
   let symbol = "ETH-USD";
   let name = "Ethereum";
@@ -48,24 +56,28 @@ export default function TradingScreen() {
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [selectedInterval, setSelectedInterval] = useState<string>("1m");
-  
+
   // position management state
   const [showModifySheet, setShowModifySheet] = useState(false);
   const [showCloseSheet, setShowCloseSheet] = useState(false);
-  
+
   // refresh state
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // fetch user position data
-  const { data: accountSummary, refetch: refetchAccountSummary } = useUserPerpAccountSummary(address);
-  
+  const { data: accountSummary, refetch: refetchAccountSummary } =
+    useUserPerpAccountSummary(address as string);
+
   // check if user has open position for current symbol
   const currentPosition = accountSummary?.assetPositions?.find(
-    (pos: any) => pos.position.coin === symbol.replace('-USD', '')
+    (pos: any) => pos.position.coin === symbol.replace("-USD", "")
   );
-  
-  const hasPosition = currentPosition && parseFloat(currentPosition.position.szi) !== 0;
-  const isLongPosition = currentPosition ? parseFloat(currentPosition.position.szi) > 0 : false;
+
+  const hasPosition =
+    currentPosition && parseFloat(currentPosition.position.szi) !== 0;
+  const isLongPosition = currentPosition
+    ? parseFloat(currentPosition.position.szi) > 0
+    : false;
 
   // refresh handler
   const onRefresh = useCallback(async () => {
@@ -84,12 +96,12 @@ export default function TradingScreen() {
             setChangePercent(priceData.changePercent24h);
             setHasError(false);
           } catch (error) {
-            console.error('failed to refresh price:', error);
+            console.error("failed to refresh price:", error);
             setHasError(true);
           } finally {
             setLoadingPrice(false);
           }
-        })()
+        })(),
       ]);
     } catch (error) {
       console.error("Refresh error:", error);
@@ -111,18 +123,17 @@ export default function TradingScreen() {
       try {
         setLoadingPrice(true);
         setHasError(false);
-        
+
         // get exact current price from hyperliquid sdk
         const priceData = await hyperliquidService.getCurrentPrice(symbol);
-        
+
         setCurrentPrice(priceData.price);
         setChange(priceData.change24h);
         setChangePercent(priceData.changePercent24h);
         setLoadingPrice(false);
         setHasError(false);
-        
       } catch (error) {
-        console.error('failed to fetch real price from hyperliquid:', error);
+        console.error("failed to fetch real price from hyperliquid:", error);
         setLoadingPrice(false);
         setHasError(true);
         // do not set any fallback price - user will see error state
@@ -284,7 +295,7 @@ export default function TradingScreen() {
             </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={styles.symbolText}>{symbol}</Text>
-              <Text style={styles.typeText}>{name} • Perp</Text>
+              <Text style={styles.typeText}>Perp</Text>
             </View>
           </View>
         </View>
@@ -294,8 +305,8 @@ export default function TradingScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
+            <RefreshControl
+              refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={colors.text.accent}
               colors={[colors.text.accent]}
@@ -349,7 +360,97 @@ export default function TradingScreen() {
           </View>
 
           <View style={styles.infoSection}>
-            <Text style={styles.infoText}>Info</Text>
+            {/* Your Position Section */}
+            {hasPosition && currentPosition && (
+              <View style={styles.positionSection}>
+                <Text style={styles.positionSectionTitle}>Your Position</Text>
+                <View style={styles.positionGrid}>
+                  {/* PNL Box */}
+                  <View style={styles.positionBox}>
+                    <Text style={styles.positionBoxLabel}>PNL</Text>
+                    <Text
+                      style={[
+                        styles.positionBoxValue,
+                        {
+                          color:
+                            parseFloat(
+                              currentPosition.position.unrealizedPnl
+                            ) >= 0
+                              ? colors.accent.green
+                              : colors.accent.red,
+                        },
+                      ]}
+                    >
+                      {parseFloat(currentPosition.position.unrealizedPnl) >= 0
+                        ? "+"
+                        : ""}
+                      $
+                      {Math.abs(
+                        parseFloat(currentPosition.position.unrealizedPnl)
+                      ).toFixed(2)}
+                    </Text>
+                  </View>
+
+                  {/* ROI Box */}
+                  <View style={styles.positionBox}>
+                    <Text style={styles.positionBoxLabel}>ROI</Text>
+                    <Text
+                      style={[
+                        styles.positionBoxValue,
+                        {
+                          color:
+                            parseFloat(
+                              currentPosition.position.unrealizedPnl
+                            ) >= 0
+                              ? colors.accent.green
+                              : colors.accent.red,
+                        },
+                      ]}
+                    >
+                      {(() => {
+                        const pnl = parseFloat(
+                          currentPosition.position.unrealizedPnl
+                        );
+                        const entryPrice = parseFloat(
+                          currentPosition.position.entryPx
+                        );
+                        const size = Math.abs(
+                          parseFloat(currentPosition.position.szi)
+                        );
+                        const positionValue = entryPrice * size;
+                        const roi =
+                          positionValue > 0 ? (pnl / positionValue) * 100 : 0;
+                        return `${roi >= 0 ? "+" : ""}${roi.toFixed(2)}%`;
+                      })()}
+                    </Text>
+                  </View>
+
+                  {/* Size Box */}
+                  <View style={styles.positionBox}>
+                    <Text style={styles.positionBoxLabel}>Size</Text>
+                    <Text style={styles.positionBoxValue}>
+                      {Math.abs(
+                        parseFloat(currentPosition.position.szi)
+                      ).toFixed(4)}{" "}
+                      {symbol.replace("-USD", "")}
+                    </Text>
+                  </View>
+
+                  {/* Margin Box */}
+                  <View style={styles.positionBox}>
+                    <Text style={styles.positionBoxLabel}>
+                      Margin (Isolated)
+                    </Text>
+                    <Text style={styles.positionBoxValue}>
+                      $
+                      {(
+                        parseFloat(currentPosition.position.marginUsed) || 0
+                      ).toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         </ScrollView>
 
@@ -361,15 +462,27 @@ export default function TradingScreen() {
                   style={[styles.tradingButton, styles.modifyButton]}
                   onPress={handleModifyPress}
                 >
-                  <Text style={styles.tradingButtonText}>Modify</Text>
+                  <Text
+                    style={[
+                      styles.tradingButtonText,
+                      { color: colors.text.primary },
+                    ]}
+                  >
+                    Modify
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.tradingButton, isLongPosition ? styles.closeLongButton : styles.closeShortButton]}
+                  style={[
+                    styles.tradingButton,
+                    isLongPosition
+                      ? styles.closeLongButton
+                      : styles.closeShortButton,
+                  ]}
                   onPress={handleClosePress}
                 >
                   <Text style={styles.tradingButtonText}>
-                    Close {isLongPosition ? 'Long' : 'Short'}
+                    Close {isLongPosition ? "Long" : "Short"}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -394,7 +507,7 @@ export default function TradingScreen() {
         </View>
 
         <BottomNavigation />
-        
+
         {/* Modify Position Bottom Sheet */}
         <ModifyPositionBottomSheet
           visible={showModifySheet}

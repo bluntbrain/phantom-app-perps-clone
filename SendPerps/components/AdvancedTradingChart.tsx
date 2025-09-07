@@ -637,12 +637,6 @@ export const AdvancedTradingChart: React.FC<AdvancedTradingChartProps> = ({
       <View style={styles.container}>
         <View style={styles.chartHeader}>
           <View style={styles.priceInfo}>
-            <View style={styles.symbolRow}>
-              <Text style={styles.symbolText}>{symbol}</Text>
-              {lastUpdateTime && (
-                <Text style={styles.updateTimeText}>{lastUpdateTime}</Text>
-              )}
-            </View>
             <Text style={styles.priceText}>${realTimePrice.toFixed(2)}</Text>
             <Text
               style={[
@@ -699,73 +693,6 @@ export const AdvancedTradingChart: React.FC<AdvancedTradingChartProps> = ({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.ohlcInfo}>
-          {(() => {
-            const candle =
-              hoveredCandle ||
-              (chartData.length > 0 ? chartData[chartData.length - 1] : null);
-            if (!candle || typeof candle !== "object") return null;
-
-            // validate vals
-            const open = typeof candle.open === "number" ? candle.open : 0;
-            const close = typeof candle.close === "number" ? candle.close : 0;
-            const high = typeof candle.high === "number" ? candle.high : 0;
-            const low = typeof candle.low === "number" ? candle.low : 0;
-            const vol = typeof candle.volume === "number" ? candle.volume : 0;
-
-            const isGreen = close >= open;
-            const volume = (vol / 1000000).toFixed(1);
-
-            return (
-              <View style={styles.ohlcCompact}>
-                <Text style={styles.ohlcText}>
-                  <Text style={styles.ohlcLabel}>O </Text>
-                  <Text style={styles.ohlcValue}>{open.toFixed(2)}</Text>
-                  <Text style={styles.ohlcSeparator}> • </Text>
-
-                  <Text style={styles.ohlcLabel}>H </Text>
-                  <Text style={[styles.ohlcValue, styles.highValue]}>
-                    {high.toFixed(2)}
-                  </Text>
-                  <Text style={styles.ohlcSeparator}> • </Text>
-
-                  <Text style={styles.ohlcLabel}>L </Text>
-                  <Text style={[styles.ohlcValue, styles.lowValue]}>
-                    {low.toFixed(2)}
-                  </Text>
-                  <Text style={styles.ohlcSeparator}> • </Text>
-
-                  <Text style={styles.ohlcLabel}>C </Text>
-                  <Text
-                    style={[
-                      styles.ohlcValue,
-                      isGreen ? styles.greenValue : styles.redValue,
-                    ]}
-                  >
-                    {close.toFixed(2)}
-                  </Text>
-                </Text>
-
-                <Text style={styles.volumeCompact}>
-                  Vol {volume}M
-                  {hoveredCandle && (
-                    <Text style={styles.timeStamp}>
-                      {" • "}
-                      {new Date(hoveredCandle.timestamp).toLocaleTimeString(
-                        "en-US",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </Text>
-                  )}
-                </Text>
-              </View>
-            );
-          })()}
-        </View>
-
         <View style={styles.chartContainer}>
           {(() => {
             if (chartData.length === 0) {
@@ -794,7 +721,6 @@ export const AdvancedTradingChart: React.FC<AdvancedTradingChartProps> = ({
             }
           })()}
         </View>
-
         <FullScreenChart
           visible={fullScreenVisible}
           onClose={() => setFullScreenVisible(false)}
@@ -803,8 +729,6 @@ export const AdvancedTradingChart: React.FC<AdvancedTradingChartProps> = ({
           renderCandlesticks={renderCandlesticks}
           currentInterval={interval}
           onIntervalChange={(newInterval) => {
-            // trigger parent update
-            // propagates via props
             if (onIntervalChange) {
               onIntervalChange(newInterval);
             }

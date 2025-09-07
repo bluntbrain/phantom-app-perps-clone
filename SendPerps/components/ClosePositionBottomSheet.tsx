@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,15 @@ import {
   Pressable,
   Dimensions,
   ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
-import { useWalletSigning } from '../hooks/useWalletSigning';
-import { hyperliquidService } from '../services/HyperliquidService';
-import * as Haptics from 'expo-haptics';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../constants/colors";
+import { useWalletSigning } from "../hooks/useWalletSigning";
+import { hyperliquidService } from "../services/HyperliquidService";
+import * as Haptics from "expo-haptics";
+import Toast from "react-native-toast-message";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface ClosePositionBottomSheetProps {
   visible: boolean;
@@ -47,14 +47,16 @@ export function ClosePositionBottomSheet({
       setIsClosing(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const coin = symbol.replace('-USD', '');
+      const coin = symbol.replace("-USD", "");
       const positionSize = Math.abs(parseFloat(position.position.szi));
       const isLong = parseFloat(position.position.szi) > 0;
 
       // get asset metadata for proper size formatting
       const meta = await hyperliquidService.getMeta();
-      const assetIndex = meta.universe.findIndex((asset: any) => asset.name === coin);
-      
+      const assetIndex = meta.universe.findIndex(
+        (asset: any) => asset.name === coin
+      );
+
       if (assetIndex === -1) {
         throw new Error(`Asset ${coin} not found`);
       }
@@ -65,9 +67,15 @@ export function ClosePositionBottomSheet({
 
       // calculate aggressive price for immediate fill
       // for long close (sell): use price 0.5% below market
-      // for short close (buy): use price 0.5% above market  
+      // for short close (buy): use price 0.5% above market
       const priceAdjustment = isLong ? 0.995 : 1.005; // -0.5% for long, +0.5% for short
-      const aggressivePrice = (currentPrice * priceAdjustment).toFixed(2);
+      const calculatedPrice = currentPrice * priceAdjustment;
+
+      // round to proper tick size - ETH and most major assets use 0.1 tick size
+      const tickSize = 0.1;
+      const aggressivePrice = (
+        Math.round(calculatedPrice / tickSize) * tickSize
+      ).toFixed(1);
 
       // place opposite order to close position
       const closeOrderParams = {
@@ -75,38 +83,44 @@ export function ClosePositionBottomSheet({
         isBuy: !isLong, // opposite direction to close
         size: formattedSize,
         price: aggressivePrice,
-        orderType: 'limit' as const, // use limit order with aggressive price
+        orderType: "limit" as const, // use limit order with aggressive price
         reduceOnly: true, // this ensures we're reducing the position
         postOnly: false,
       };
 
-      console.log('[Close Position] Placing order:', closeOrderParams);
+      console.log("[Close Position] Placing order:", closeOrderParams);
 
       const result = await signAndPlaceOrder(closeOrderParams);
 
-      if (result.status === 'ok') {
-        Alert.alert(
-          'Position Closed',
-          `Successfully closed your ${isLong ? 'long' : 'short'} position for ${coin}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                onClose();
-                // navigate back or refresh data
-              }
-            }
-          ]
-        );
+      if (result.status === "ok") {
+        Toast.show({
+          type: "success",
+          text1: "Position Closed",
+          text2: `Closed your ${
+            isLong ? "long" : "short"
+          } position for ${coin}`,
+          visibilityTime: 3000,
+        });
+
+        // Close the sheet after a short delay
+        setTimeout(() => {
+          onClose();
+        }, 500);
       } else {
-        throw new Error(result.response || 'Close order failed');
+        throw new Error(result.response || "Close order failed");
       }
     } catch (error) {
-      console.error('close position failed:', error);
-      Alert.alert(
-        'Close Failed',
-        error instanceof Error ? error.message : 'Failed to close position. Please try again.',
-      );
+      console.error("close position failed:", error);
+
+      Toast.show({
+        type: "error",
+        text1: "Close Failed",
+        text2:
+          error instanceof Error
+            ? error.message
+            : "Failed to close position. Please try again.",
+        visibilityTime: 4000,
+      });
     } finally {
       setIsClosing(false);
     }
@@ -119,7 +133,9 @@ export function ClosePositionBottomSheet({
   const positionSize = Math.abs(parseFloat(positionData.szi));
   const unrealizedPnl = parseFloat(positionData.unrealizedPnl);
   const pnlColor = unrealizedPnl >= 0 ? colors.accent.green : colors.accent.red;
-  const pnlText = `${unrealizedPnl >= 0 ? '+' : ''}$${Math.abs(unrealizedPnl).toLocaleString('en-US', {
+  const pnlText = `${unrealizedPnl >= 0 ? "+" : ""}$${Math.abs(
+    unrealizedPnl
+  ).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -135,7 +151,7 @@ export function ClosePositionBottomSheet({
         <Pressable style={styles.container} onPress={() => {}}>
           {/* Handle Bar */}
           <View style={styles.handle} />
-          
+
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Close Position</Text>
@@ -148,14 +164,20 @@ export function ClosePositionBottomSheet({
           <View style={styles.positionInfo}>
             <View style={styles.positionHeader}>
               <Text style={styles.coinText}>
-                {symbol.replace('-USD', '')} {isLong ? 'Long' : 'Short'}
+                {symbol.replace("-USD", "")} {isLong ? "Long" : "Short"}
               </Text>
-              <View style={[
-                styles.positionTypeTag,
-                { backgroundColor: isLong ? colors.accent.green : colors.accent.red }
-              ]}>
+              <View
+                style={[
+                  styles.positionTypeTag,
+                  {
+                    backgroundColor: isLong
+                      ? colors.accent.green
+                      : colors.accent.red,
+                  },
+                ]}
+              >
                 <Text style={styles.positionTypeText}>
-                  {isLong ? 'LONG' : 'SHORT'}
+                  {isLong ? "LONG" : "SHORT"}
                 </Text>
               </View>
             </View>
@@ -164,7 +186,7 @@ export function ClosePositionBottomSheet({
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Position Size</Text>
                 <Text style={styles.detailValue}>
-                  {positionSize.toFixed(6)} {symbol.replace('-USD', '')}
+                  {positionSize.toFixed(6)} {symbol.replace("-USD", "")}
                 </Text>
               </View>
 
@@ -194,7 +216,10 @@ export function ClosePositionBottomSheet({
           {/* Close Button */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.closePositionButton, isClosing && { opacity: 0.6 }]}
+              style={[
+                styles.closePositionButton,
+                isClosing && { opacity: 0.6 },
+              ]}
               onPress={handleClosePosition}
               disabled={isClosing}
               activeOpacity={0.8}
@@ -206,7 +231,7 @@ export function ClosePositionBottomSheet({
                 </View>
               ) : (
                 <Text style={styles.buttonText}>
-                  Close {isLong ? 'Long' : 'Short'}
+                  Close {isLong ? "Long" : "Short"}
                 </Text>
               )}
             </TouchableOpacity>
@@ -220,8 +245,8 @@ export function ClosePositionBottomSheet({
 const styles = {
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end' as const,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end" as const,
   },
   container: {
     backgroundColor: colors.background.primary,
@@ -235,42 +260,42 @@ const styles = {
     height: 4,
     backgroundColor: colors.text.secondary,
     borderRadius: 2,
-    alignSelf: 'center' as const,
+    alignSelf: "center" as const,
     marginTop: 8,
     marginBottom: 16,
   },
   header: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 20,
     marginBottom: 24,
   },
   title: {
     color: colors.text.primary,
     fontSize: 20,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   closeButton: {
     width: 32,
     height: 32,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   positionInfo: {
     paddingHorizontal: 20,
     marginBottom: 32,
   },
   positionHeader: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     marginBottom: 20,
   },
   coinText: {
     color: colors.text.primary,
     fontSize: 18,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   positionTypeTag: {
     paddingHorizontal: 8,
@@ -280,7 +305,7 @@ const styles = {
   positionTypeText: {
     color: colors.text.primary,
     fontSize: 12,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   positionDetails: {
     backgroundColor: colors.background.secondary,
@@ -288,9 +313,9 @@ const styles = {
     padding: 16,
   },
   detailRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     paddingVertical: 8,
   },
   pnlRow: {
@@ -306,11 +331,11 @@ const styles = {
   detailValue: {
     color: colors.text.primary,
     fontSize: 14,
-    fontWeight: '500' as const,
+    fontWeight: "500" as const,
   },
   pnlValue: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   buttonContainer: {
     paddingHorizontal: 20,
@@ -319,17 +344,17 @@ const styles = {
     backgroundColor: colors.accent.red,
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   loadingContainer: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
   },
   buttonText: {
     color: colors.text.primary,
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
     marginLeft: 8,
   },
 };

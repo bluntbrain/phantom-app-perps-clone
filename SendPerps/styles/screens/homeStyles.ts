@@ -21,6 +21,27 @@ export const homeStyles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    color: colors.text.primary,
+    fontSize: fontSize.md,
+    fontWeight: "600",
+  },
+  accountInfo: {
+    flexDirection: "column",
+    gap: 2,
+  },
+  accountTitle: {
+    color: colors.text.primary,
+    fontSize: fontSize.xl,
+    fontWeight: "600",
+  },
   headerLogo: {
     width: 32,
     height: 32,
@@ -60,6 +81,7 @@ export const homeStyles = StyleSheet.create({
   balanceSubtext: {
     color: colors.text.accent,
     fontSize: fontSize.md,
+    fontWeight: '500',
   },
   balanceBreakdown: {
     marginTop: spacing.xs,
@@ -173,7 +195,7 @@ export const homeStyles = StyleSheet.create({
   walletAddress: {
     color: colors.text.secondary,
     fontSize: fontSize.sm,
-    fontWeight: "500",
+    fontWeight: "400",
   },
   logoutButton: {
     padding: spacing.xs,

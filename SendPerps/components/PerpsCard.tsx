@@ -29,11 +29,20 @@ export const PerpsCard: React.FC<PerpsCardProps> = ({
   const getRankStyle = () => {
     switch (rank) {
       case 1:
-        return { backgroundColor: colors.ranking.first };
+        return {
+          backgroundColor: colors.ranking.first,
+          color: colors.text.black,
+        };
       case 2:
-        return { backgroundColor: colors.ranking.second };
+        return {
+          backgroundColor: colors.ranking.second,
+          color: colors.text.black,
+        };
       case 3:
-        return { backgroundColor: colors.ranking.third };
+        return {
+          backgroundColor: colors.ranking.third,
+          color: colors.text.black,
+        };
       default:
         return {};
     }
@@ -60,7 +69,9 @@ export const PerpsCard: React.FC<PerpsCardProps> = ({
 
         <View style={styles.cryptoIcon}>
           {iconUrl ? (
-            <Image source={{ uri: iconUrl }} style={styles.icon} />
+            <View style={styles.iconBackground}>
+              <Image source={{ uri: iconUrl }} style={styles.icon} />
+            </View>
           ) : (
             <View
               style={[
@@ -97,8 +108,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     backgroundColor: colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.primary,
   },
   leftSection: {
     flexDirection: "row",
@@ -122,10 +131,19 @@ const styles = StyleSheet.create({
     position: "relative",
     marginRight: spacing.md,
   },
-  icon: {
+  iconBackground: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 2,
+  },
+  icon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   iconPlaceholder: {
     width: 40,
@@ -163,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   volumeText: {
-    color: colors.text.secondary,
+    color: colors.text.primary,
     fontSize: fontSize.md,
     fontWeight: "500",
   },

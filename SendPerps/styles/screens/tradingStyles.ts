@@ -48,7 +48,7 @@ export const tradingStyles = StyleSheet.create({
   },
   symbolText: {
     color: colors.text.primary,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.xl,
     fontWeight: "600",
   },
   typeText: {
@@ -59,17 +59,15 @@ export const tradingStyles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.md,
+    paddingBottom: 0,
   },
   fixedButtonContainer: {
     backgroundColor: colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.primary,
     paddingTop: spacing.sm,
   },
   balanceSection: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border.primary,
   },
@@ -102,7 +100,7 @@ export const tradingStyles = StyleSheet.create({
   },
   infoSection: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   infoText: {
     color: colors.text.secondary,
@@ -116,11 +114,11 @@ export const tradingStyles = StyleSheet.create({
   },
   tradingButton: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 48,
+    height: 52,
   },
   longButton: {
     backgroundColor: colors.accent.purple,
@@ -134,13 +132,13 @@ export const tradingStyles = StyleSheet.create({
     borderColor: colors.border.primary,
   },
   closeLongButton: {
-    backgroundColor: colors.accent.red,
+    backgroundColor: colors.accent.purple,
   },
   closeShortButton: {
-    backgroundColor: colors.accent.red,
+    backgroundColor: colors.accent.purple,
   },
   tradingButtonText: {
-    color: colors.text.primary,
+    color: colors.text.black,
     fontSize: fontSize.lg,
     fontWeight: "600",
   },
@@ -153,5 +151,40 @@ export const tradingStyles = StyleSheet.create({
   loadingText: {
     color: colors.text.secondary,
     fontSize: fontSize.sm,
+  },
+  // Position Section Styles
+  positionSection: {
+    marginTop: spacing.md,
+  },
+  positionSectionTitle: {
+    color: colors.text.secondary,
+    fontSize: fontSize.md,
+    fontWeight: '500',
+    marginBottom: spacing.sm,
+  },
+  positionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  positionBox: {
+    flex: 1,
+    minWidth: '48%',
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    alignItems: 'center',
+  },
+  positionBoxLabel: {
+    color: colors.text.secondary,
+    fontSize: fontSize.xs,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  positionBoxValue: {
+    color: colors.text.primary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

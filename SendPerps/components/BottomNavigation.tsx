@@ -47,34 +47,40 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   };
 
   const getIconColor = (tab: string) => {
-    return currentTab === tab ? colors.text.primary : colors.text.secondary;
+    return currentTab === tab ? colors.accent.purple : colors.text.secondary;
   };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={styles.tabItem}
+        style={[styles.tabItem, currentTab === "home" && styles.tabItemActive]}
         onPress={() => handleTabPress("home")}
       >
         <Feather name="home" size={24} color={getIconColor("home")} />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.tabItem}
+        style={[styles.tabItem, currentTab === "perp" && styles.tabItemActive]}
         onPress={() => handleTabPress("perp")}
       >
         <Feather name="trending-up" size={24} color={getIconColor("perp")} />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.tabItem}
+        style={[
+          styles.tabItem,
+          currentTab === "history" && styles.tabItemActive,
+        ]}
         onPress={() => handleTabPress("history")}
       >
         <Feather name="clock" size={24} color={getIconColor("history")} />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.tabItem}
+        style={[
+          styles.tabItem,
+          currentTab === "search" && styles.tabItemActive,
+        ]}
         onPress={() => handleTabPress("search")}
       >
         <Feather name="search" size={24} color={getIconColor("search")} />
@@ -88,13 +94,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.primary,
     backgroundColor: colors.background.primary,
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.md,
+    marginTop: -spacing.md,
+  },
+  tabItemActive: {
+    borderTopWidth: 1,
+    borderTopColor: colors.accent.purple,
+    paddingTop: spacing.md,
   },
 });

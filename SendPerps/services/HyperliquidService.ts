@@ -850,11 +850,14 @@ export class HyperliquidService {
   // retrieve user's perpetuals account summary
   public async getUserPerpAccountSummary(userAddress: string, dex?: string): Promise<any> {
     try {
+      // don't pass dex parameter if it looks like a trading symbol (contains hyphen or USD)
+      const shouldIncludeDex = dex && !dex.includes('-') && !dex.includes('USD');
       const requestBody = {
         type: 'clearinghouseState',
         user: userAddress,
-        ...(dex && { dex })
+        ...(shouldIncludeDex && { dex })
       };
+      console.log('Fetching perp account summary:', { userAddress, dex, shouldIncludeDex, requestBody });
 
       const result = await this.apiCall(requestBody);
       console.log('get user perp account summary completed:', { userAddress, dex }, result);

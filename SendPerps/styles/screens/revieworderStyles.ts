@@ -9,8 +9,6 @@ export const revieworderStyles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
@@ -20,7 +18,6 @@ export const revieworderStyles = StyleSheet.create({
     width: 32,
     height: 32,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   headerTitle: {
     color: colors.text.primary,
@@ -159,7 +156,7 @@ export const revieworderStyles = StyleSheet.create({
     alignItems: 'center',
   },
   openButtonText: {
-    color: colors.text.primary,
+    color: colors.text.black,
     fontSize: fontSize.lg,
     fontWeight: '600',
   },

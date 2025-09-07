@@ -5,7 +5,8 @@ import { spacing, fontSize, borderRadius } from "../../constants/spacing";
 export const advancedTradingChartStyles = StyleSheet.create({
   container: {
     backgroundColor: colors.background.primary,
-    marginVertical: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: 0,
   },
   chartHeader: {
     flexDirection: "row",
@@ -38,13 +39,19 @@ export const advancedTradingChartStyles = StyleSheet.create({
   },
   priceText: {
     color: colors.text.primary,
-    fontSize: fontSize.xl,
+    fontSize: 48,
     fontWeight: "600",
     marginBottom: spacing.xs,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
   },
   changeText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.lg,
     fontWeight: "500",
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
   },
   fullScreenButton: {
     padding: spacing.sm,
@@ -53,11 +60,11 @@ export const advancedTradingChartStyles = StyleSheet.create({
   },
   ohlcInfo: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     backgroundColor: colors.background.secondary,
     marginHorizontal: spacing.sm,
     borderRadius: 6,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     borderLeftWidth: 3,
     borderLeftColor: colors.accent.blue,
   },
@@ -105,7 +112,8 @@ export const advancedTradingChartStyles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
   chartContainer: {
-    marginHorizontal: spacing.sm,
+    marginHorizontal: spacing.xs,
+    marginBottom: spacing.xs,
   },
   instructions: {
     paddingHorizontal: spacing.md,
