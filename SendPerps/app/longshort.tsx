@@ -13,20 +13,28 @@ import * as Haptics from 'expo-haptics';
 import { LeverageBottomSheet } from '../components/LeverageBottomSheet';
 import { Keypad } from '../components/Keypad';
 import { longshortStyles as styles } from '../styles/screens/longshortStyles';
-import { useKeypadInput, useTradingCalculations } from '../hooks';
+import { useKeypadInput, useTradingCalculations, useWalletBalance } from '../hooks';
 
 export default function LongShortScreen() {
-  const { symbol, isLong, autoCloseEnabled = 'false' } = useLocalSearchParams();
+  const { 
+    symbol, 
+    isLong, 
+    autoCloseEnabled = 'false', 
+    currentPrice,
+    isAddToPosition = 'false',
+    isReducePosition = 'false'
+  } = useLocalSearchParams();
 
   const [leverage, setLeverage] = useState('2');
   const [autoClose, setAutoClose] = useState(false);
   const [showLeverageSheet, setShowLeverageSheet] = useState(false);
 
-  const availableBalance = 1000.0; // mock balance
-  const currentPrice = 4460.1; // mock price
+  const { balance } = useWalletBalance();
+  const availableBalance = balance; // use real balance
+  const price = parseFloat(currentPrice as string) || 4460.1; // use real price from params
   
-  // Use custom hooks
-  const { value: size, handleKeyPress, handleLongPress } = useKeypadInput('0');
+  // Use custom hooks - start with $15 to ensure above minimum order value
+  const { value: size, handleKeyPress, handleLongPress } = useKeypadInput('15');
   const {
     formatSize,
     calculateLeveragedSize,
@@ -55,12 +63,36 @@ export default function LongShortScreen() {
         amount: size,
         leverage: `${leverage}`,
         leveragedSize: calculateLeveragedSize().replace('$', ''),
-        currentPrice: currentPrice.toString(),
+        currentPrice: price.toString(),
+        isAddToPosition,
+        isReducePosition,
       },
     });
   };
 
   const isLongPosition = isLong === 'true';
+  const isAddMode = isAddToPosition === 'true';
+  const isReduceMode = isReducePosition === 'true';
+  
+  const getScreenTitle = () => {
+    if (isAddMode) {
+      return `Add to ${isLongPosition ? 'Long' : 'Short'} ${symbol}`;
+    } else if (isReduceMode) {
+      return `Reduce ${isLongPosition ? 'Short' : 'Long'} ${symbol}`;
+    } else {
+      return `${isLongPosition ? 'Long' : 'Short'} ${symbol}`;
+    }
+  };
+
+  const getCustomButtonText = () => {
+    if (isAddMode) {
+      return `Add to ${isLongPosition ? 'Long' : 'Short'}`;
+    } else if (isReduceMode) {
+      return `Reduce Position`;
+    } else {
+      return 'Review'; // default text
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,7 +107,7 @@ export default function LongShortScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {isLongPosition ? 'Long' : 'Short'} {symbol}
+          {getScreenTitle()}
         </Text>
       </View>
 
@@ -197,7 +229,7 @@ export default function LongShortScreen() {
                 isInsufficientFunds && styles.reviewButtonErrorText,
               ]}
             >
-              {getButtonText()}
+              {(isAddMode || isReduceMode) ? getCustomButtonText() : getButtonText()}
             </Text>
           </TouchableOpacity>
         </View>

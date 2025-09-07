@@ -128,6 +128,17 @@ export const tradingStyles = StyleSheet.create({
   shortButton: {
     backgroundColor: colors.accent.purple,
   },
+  modifyButton: {
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+  },
+  closeLongButton: {
+    backgroundColor: colors.accent.red,
+  },
+  closeShortButton: {
+    backgroundColor: colors.accent.red,
+  },
   tradingButtonText: {
     color: colors.text.primary,
     fontSize: fontSize.lg,

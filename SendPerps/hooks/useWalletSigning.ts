@@ -86,11 +86,53 @@ export function useWalletSigning() {
     return result;
   };
 
+  // cancel order operation
+  const signAndCancelOrder = async (asset: number, orderId: number) => {
+    if (!isReady) {
+      throw new Error('Wallet signing not ready');
+    }
+
+    const { hyperliquidService } = await import('../services/HyperliquidService');
+    return await hyperliquidService.cancelOrder(asset, orderId);
+  };
+
+  // modify order operation - requires full order parameters
+  const signAndModifyOrder = async (params: {
+    orderId: number;
+    asset: number;
+    isBuy: boolean;
+    price: string;
+    size: string;
+    reduceOnly?: boolean;
+    orderType: 'limit' | 'market';
+    postOnly?: boolean;
+  }) => {
+    if (!isReady) {
+      throw new Error('Wallet signing not ready');
+    }
+
+    const { hyperliquidService } = await import('../services/HyperliquidService');
+    return await hyperliquidService.modifyOrder(params);
+  };
+
+  // update leverage operation
+  const signAndUpdateLeverage = async (asset: number, isCross: boolean, leverage: number) => {
+    if (!isReady) {
+      throw new Error('Wallet signing not ready');
+    }
+
+    const { hyperliquidService } = await import('../services/HyperliquidService');
+    return await hyperliquidService.updateLeverage(asset, isCross, leverage);
+  };
+
   return {
     isReady,
     error,
     signAndTransfer,
     signAndPlaceOrder,
     signAndPlaceSpotOrder,
+    signAndCancelOrder,
+    signAndModifyOrder,
+    signAndUpdateLeverage,
   };
 }

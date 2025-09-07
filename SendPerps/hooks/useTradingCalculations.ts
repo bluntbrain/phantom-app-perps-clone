@@ -15,14 +15,16 @@ export function useTradingCalculations(size: string, leverage: string, available
 
   const isInsufficientFunds = sizeNum > availableBalance;
   const isAmountZero = sizeNum === 0;
+  const isBelowMinimum = (sizeNum * leverageNum) < 10; 
 
   const getButtonText = () => {
-    if (isAmountZero) return 'Review';
+    if (isAmountZero) return 'Enter Amount';
+    if (isBelowMinimum) return 'Minimum $10 Order';
     if (isInsufficientFunds) return 'Insufficient Funds';
     return 'Review';
   };
 
-  const isButtonDisabled = isAmountZero || isInsufficientFunds;
+  const isButtonDisabled = isAmountZero || isInsufficientFunds || isBelowMinimum;
 
   return {
     sizeNum,
@@ -31,6 +33,7 @@ export function useTradingCalculations(size: string, leverage: string, available
     calculateLeveragedSize,
     isInsufficientFunds,
     isAmountZero,
+    isBelowMinimum,
     getButtonText,
     isButtonDisabled,
   };

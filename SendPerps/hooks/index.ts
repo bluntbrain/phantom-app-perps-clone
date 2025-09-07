@@ -5,3 +5,8 @@ export { useKeypadInput } from './useKeypadInput';
 export { useSolanaPrice } from './useSolanaPrice';
 export { useFeeEstimation } from './useFeeEstimation';
 export { useTradingCalculations } from './useTradingCalculations';
+export { 
+  useUserPerpAccountSummary, 
+  useUserOpenOrders, 
+  useHyperliquidPerpData 
+} from './useHyperliquidPerp';

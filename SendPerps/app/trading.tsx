@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
+import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { colors } from "../constants/colors";
 import { haptics } from "../utils/haptics";
 import * as Haptics from "expo-haptics";
@@ -17,13 +18,15 @@ import { BottomNavigation } from "../components/BottomNavigation";
 import { Ionicons } from "@expo/vector-icons";
 import { hyperliquidService } from "../services/HyperliquidService";
 import { tradingStyles as styles } from "../styles/screens/tradingStyles";
-import { useWallet, useWalletBalance } from "../hooks";
+import { useWallet, useWalletBalance, useUserPerpAccountSummary } from "../hooks";
+import { ModifyPositionBottomSheet } from "../components/ModifyPositionBottomSheet";
+import { ClosePositionBottomSheet } from "../components/ClosePositionBottomSheet";
 
 export default function TradingScreen() {
   // safe parameter extraction with error handling
   const params = useLocalSearchParams();
   const { address } = useWallet();
-  const { balance, isLoading: loadingBalance } = useWalletBalance();
+  const { balance, isLoading: loadingBalance, refetch: refetchBalance } = useWalletBalance();
 
   let symbol = "ETH-USD";
   let name = "Ethereum";
@@ -45,27 +48,88 @@ export default function TradingScreen() {
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [selectedInterval, setSelectedInterval] = useState<string>("1m");
+  
+  // position management state
+  const [showModifySheet, setShowModifySheet] = useState(false);
+  const [showCloseSheet, setShowCloseSheet] = useState(false);
+  
+  // refresh state
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // fetch user position data
+  const { data: accountSummary, refetch: refetchAccountSummary } = useUserPerpAccountSummary(address);
+  
+  // check if user has open position for current symbol
+  const currentPosition = accountSummary?.assetPositions?.find(
+    (pos: any) => pos.position.coin === symbol.replace('-USD', '')
+  );
+  
+  const hasPosition = currentPosition && parseFloat(currentPosition.position.szi) !== 0;
+  const isLongPosition = currentPosition ? parseFloat(currentPosition.position.szi) > 0 : false;
 
-
-  // static price data loading with error handling
-  useEffect(() => {
+  // refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      //  set static data, no dynamic logic to prevent crashes
-      setCurrentPrice(100.0);
-      setChange(1.5);
-      setChangePercent(1.5);
-      setLoadingPrice(false);
-      setHasError(false);
+      await Promise.all([
+        refetchBalance(),
+        refetchAccountSummary(),
+        // refresh price data
+        (async () => {
+          try {
+            setLoadingPrice(true);
+            const priceData = await hyperliquidService.getCurrentPrice(symbol);
+            setCurrentPrice(priceData.price);
+            setChange(priceData.change24h);
+            setChangePercent(priceData.changePercent24h);
+            setHasError(false);
+          } catch (error) {
+            console.error('failed to refresh price:', error);
+            setHasError(true);
+          } finally {
+            setLoadingPrice(false);
+          }
+        })()
+      ]);
     } catch (error) {
-      // fallback - set everything to safe defaults
+      console.error("Refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchBalance, refetchAccountSummary, symbol]);
+
+  // auto-refresh when screen comes into focus (e.g., after closing position)
+  useFocusEffect(
+    useCallback(() => {
+      onRefresh();
+    }, [onRefresh])
+  );
+
+  // fetch exact real-time price using hyperliquid sdk only
+  useEffect(() => {
+    const fetchRealPrice = async () => {
       try {
-        setCurrentPrice(100.0);
-        setChange(0.0);
-        setChangePercent(0.0);
+        setLoadingPrice(true);
+        setHasError(false);
+        
+        // get exact current price from hyperliquid sdk
+        const priceData = await hyperliquidService.getCurrentPrice(symbol);
+        
+        setCurrentPrice(priceData.price);
+        setChange(priceData.change24h);
+        setChangePercent(priceData.changePercent24h);
+        setLoadingPrice(false);
+        setHasError(false);
+        
+      } catch (error) {
+        console.error('failed to fetch real price from hyperliquid:', error);
         setLoadingPrice(false);
         setHasError(true);
-      } catch (innerError) {}
-    }
+        // do not set any fallback price - user will see error state
+      }
+    };
+
+    fetchRealPrice();
   }, [symbol, name]);
 
   const handleBackPress = () => {
@@ -89,6 +153,7 @@ export default function TradingScreen() {
           name: name || "Ethereum",
           isLong: "true",
           autoCloseEnabled: "false",
+          currentPrice: currentPrice.toString(),
         },
       });
     } catch (error) {}
@@ -104,6 +169,55 @@ export default function TradingScreen() {
           name: name || "Ethereum",
           isLong: "false",
           autoCloseEnabled: "false",
+          currentPrice: currentPrice.toString(),
+        },
+      });
+    } catch (error) {}
+  };
+
+  const handleModifyPress = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setShowModifySheet(true);
+    } catch (error) {}
+  };
+
+  const handleClosePress = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setShowCloseSheet(true);
+    } catch (error) {}
+  };
+
+  const handleAddToPosition = () => {
+    try {
+      setShowModifySheet(false);
+      router.push({
+        pathname: "/longshort",
+        params: {
+          symbol: symbol || "ETH-USD",
+          name: name || "Ethereum",
+          isLong: isLongPosition.toString(),
+          autoCloseEnabled: "false",
+          currentPrice: currentPrice.toString(),
+          isAddToPosition: "true",
+        },
+      });
+    } catch (error) {}
+  };
+
+  const handleReducePosition = () => {
+    try {
+      setShowModifySheet(false);
+      router.push({
+        pathname: "/longshort",
+        params: {
+          symbol: symbol || "ETH-USD",
+          name: name || "Ethereum",
+          isLong: (!isLongPosition).toString(), // opposite direction to reduce
+          autoCloseEnabled: "false",
+          currentPrice: currentPrice.toString(),
+          isReducePosition: "true",
         },
       });
     } catch (error) {}
@@ -179,6 +293,14 @@ export default function TradingScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={colors.text.accent}
+              colors={[colors.text.accent]}
+            />
+          }
         >
           {(() => {
             try {
@@ -233,23 +355,62 @@ export default function TradingScreen() {
 
         <View style={styles.fixedButtonContainer}>
           <View style={styles.tradingButtons}>
-            <TouchableOpacity
-              style={[styles.tradingButton, styles.longButton]}
-              onPress={handleLongPress}
-            >
-              <Text style={styles.tradingButtonText}>Long</Text>
-            </TouchableOpacity>
+            {hasPosition ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.tradingButton, styles.modifyButton]}
+                  onPress={handleModifyPress}
+                >
+                  <Text style={styles.tradingButtonText}>Modify</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.tradingButton, styles.shortButton]}
-              onPress={handleShortPress}
-            >
-              <Text style={styles.tradingButtonText}>Short</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tradingButton, isLongPosition ? styles.closeLongButton : styles.closeShortButton]}
+                  onPress={handleClosePress}
+                >
+                  <Text style={styles.tradingButtonText}>
+                    Close {isLongPosition ? 'Long' : 'Short'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.tradingButton, styles.longButton]}
+                  onPress={handleLongPress}
+                >
+                  <Text style={styles.tradingButtonText}>Long</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.tradingButton, styles.shortButton]}
+                  onPress={handleShortPress}
+                >
+                  <Text style={styles.tradingButtonText}>Short</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
         <BottomNavigation />
+        
+        {/* Modify Position Bottom Sheet */}
+        <ModifyPositionBottomSheet
+          visible={showModifySheet}
+          onClose={() => setShowModifySheet(false)}
+          onAddToPosition={handleAddToPosition}
+          onReducePosition={handleReducePosition}
+        />
+
+        {/* Close Position Bottom Sheet */}
+        <ClosePositionBottomSheet
+          visible={showCloseSheet}
+          onClose={() => setShowCloseSheet(false)}
+          position={currentPosition}
+          currentPrice={currentPrice}
+          symbol={symbol}
+        />
       </SafeAreaView>
     );
   } catch (renderError) {

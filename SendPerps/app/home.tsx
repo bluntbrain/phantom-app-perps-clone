@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { usePrivy } from "@privy-io/expo";
@@ -16,21 +18,52 @@ import { homeStyles as styles } from "../styles/screens/homeStyles";
 import { BottomNavigation } from "../components/BottomNavigation";
 import { useWallet, useWalletBalance } from "../hooks";
 import { useWalletSigning } from "../hooks/useWalletSigning";
+import { useHyperliquidPerpData } from "../hooks/useHyperliquidPerp";
+import { OrdersSection } from "../components/OrdersSection";
+import { RecentActivitySection } from "../components/RecentActivitySection";
 
 export default function HomeScreen() {
   const { user, logout, isReady } = usePrivy();
   const { address } = useWallet();
   const {
     balance,
+    availableBalance,
     spotBalance,
     totalBalance,
     isLoading: balanceLoading,
+    refetch: refetchBalance,
   } = useWalletBalance();
   const {
     isReady: signingReady,
     signAndTransfer,
     error: signingError,
   } = useWalletSigning();
+
+  // fetch user trading data
+  const {
+    accountSummary,
+    openOrders,
+    isLoading: perpDataLoading,
+    hasError: perpDataError,
+    refetchAll: refetchPerpData,
+  } = useHyperliquidPerpData(address || undefined);
+
+  // refresh state
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchBalance(),
+        refetchPerpData()
+      ]);
+    } catch (error) {
+      console.error("Refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchBalance, refetchPerpData]);
 
   if (!isReady) {
     return (
@@ -172,15 +205,27 @@ export default function HomeScreen() {
           <>
             <View style={styles.balanceBreakdown}>
               <Text style={styles.balanceSubtext}>
-                Perps: ${balance.toFixed(2)} • Spot: ${spotBalance.toFixed(2)}
+                Perps: ${balance.toFixed(2)} (${availableBalance.toFixed(2)} available) • Spot: ${spotBalance.toFixed(2)}
               </Text>
             </View>
           </>
         )}
       </View>
 
-      {/* Content Wrapper with flex to push bottom nav down */}
-      <View style={{ flex: 1 }}>
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={colors.text.accent}
+            colors={[colors.text.accent]}
+          />
+        }
+      >
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
@@ -201,10 +246,28 @@ export default function HomeScreen() {
             <Text style={styles.quickActionSubtitle}>Bridge from Solana</Text>
           </TouchableOpacity>
         </View>
-        
-        {/* Spacer to push navigation to bottom */}
-        <View style={{ flex: 1 }} />
-      </View>
+
+        {/* Trading Data Sections - Only show if user has an address */}
+        {address && (
+          <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
+            {/* Open Orders Section */}
+            <OrdersSection
+              orders={openOrders.data}
+              isLoading={openOrders.isLoading}
+              error={openOrders.error}
+              onRefresh={refetchPerpData}
+            />
+
+            {/* Recent Activity / Positions Section */}
+            <RecentActivitySection
+              accountSummary={accountSummary.data}
+              isLoading={accountSummary.isLoading}
+              error={accountSummary.error}
+              onRefresh={refetchPerpData}
+            />
+          </View>
+        )}
+      </ScrollView>
 
       <BottomNavigation activeTab="home" />
     </SafeAreaView>

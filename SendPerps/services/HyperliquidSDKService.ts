@@ -266,6 +266,135 @@ export class HyperliquidSDKService {
   public formatSizeWithDecimals(size: number, sizeDecimals: number): string {
     return size.toFixed(sizeDecimals);
   }
+
+  // place order method
+  public async placeOrder(params: {
+    asset: number;
+    isBuy: boolean;
+    price: string;
+    size: string;
+    orderType: 'limit' | 'market';
+    postOnly?: boolean;
+    reduceOnly?: boolean;
+  }): Promise<any> {
+    if (!this.walletClient) {
+      throw new Error('wallet client not initialized');
+    }
+
+    try {
+      const orderParams = {
+        orders: [{
+          a: params.asset,
+          b: params.isBuy,
+          p: params.price,
+          s: params.size,
+          r: params.reduceOnly || false,
+          t: {
+            limit: {
+              tif: (params.orderType === 'market' ? "Ioc" : params.postOnly ? "Alo" : "Gtc") as "Ioc" | "Gtc" | "Alo"
+            }
+          }
+        }],
+        grouping: "na" as const
+      };
+
+      const result = await this.walletClient.order(orderParams);
+      return result;
+    } catch (error) {
+      console.error('place order failed:', error);
+      throw error;
+    }
+  }
+
+  // cancel order method
+  public async cancelOrder(params: {
+    asset: number;
+    orderId: number;
+  }): Promise<any> {
+    if (!this.walletClient) {
+      throw new Error('wallet client not initialized');
+    }
+
+    try {
+      const cancelParams = {
+        cancels: [{
+          a: params.asset,
+          o: params.orderId
+        }]
+      };
+
+      const result = await this.walletClient.cancel(cancelParams);
+      return result;
+    } catch (error) {
+      console.error('cancel order failed:', error);
+      throw error;
+    }
+  }
+
+  // modify order method - requires full order parameters
+  public async modifyOrder(params: {
+    orderId: number;
+    asset: number;
+    isBuy: boolean;
+    price: string;
+    size: string;
+    reduceOnly?: boolean;
+    orderType: 'limit' | 'market';
+    postOnly?: boolean;
+  }): Promise<any> {
+    if (!this.walletClient) {
+      throw new Error('wallet client not initialized');
+    }
+
+    try {
+      const modifyParams = {
+        oid: params.orderId,
+        order: {
+          a: params.asset,
+          b: params.isBuy,
+          p: params.price,
+          s: params.size,
+          r: params.reduceOnly || false,
+          t: {
+            limit: {
+              tif: (params.orderType === 'market' ? "Ioc" : params.postOnly ? "Alo" : "Gtc") as "Ioc" | "Gtc" | "Alo"
+            }
+          }
+        }
+      };
+
+      const result = await this.walletClient.modify(modifyParams);
+      return result;
+    } catch (error) {
+      console.error('modify order failed:', error);
+      throw error;
+    }
+  }
+
+  // update leverage method
+  public async updateLeverage(params: {
+    asset: number;
+    isCross: boolean;
+    leverage: number;
+  }): Promise<any> {
+    if (!this.walletClient) {
+      throw new Error('wallet client not initialized');
+    }
+
+    try {
+      const leverageParams = {
+        asset: params.asset,
+        isCross: params.isCross,
+        leverage: params.leverage
+      };
+
+      const result = await this.walletClient.updateLeverage(leverageParams);
+      return result;
+    } catch (error) {
+      console.error('update leverage failed:', error);
+      throw error;
+    }
+  }
 }
 
 export const hyperliquidSDKService = new HyperliquidSDKService();

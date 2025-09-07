@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,33 +6,149 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/colors';
 import * as Haptics from 'expo-haptics';
 import { revieworderStyles as styles } from '../styles/screens/revieworderStyles';
+import { useWalletSigning } from '../hooks/useWalletSigning';
+import { hyperliquidService } from '../services/HyperliquidService';
 
 export default function ReviewOrderScreen() {
-  const { symbol, isLong, amount, leverage, leveragedSize, currentPrice } = useLocalSearchParams();
+  const { 
+    symbol, 
+    isLong, 
+    amount, 
+    leverage, 
+    leveragedSize, 
+    currentPrice,
+    isAddToPosition = 'false',
+    isReducePosition = 'false' 
+  } = useLocalSearchParams();
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  
+  const { isReady: signingReady, signAndPlaceOrder } = useWalletSigning();
 
   const handleBack = () => {
     Haptics.selectionAsync();
     router.back();
   };
 
-  const handleOpenPosition = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // TODO: implement position opening logic
-    console.log('Opening position:', {
-      symbol,
-      isLong: isLong === 'true',
-      amount,
-      leverage,
-      leveragedSize,
-    });
+  const handleOpenPosition = async () => {
+    if (!signingReady) {
+      Alert.alert('Wallet Not Ready', 'Please wait for wallet initialization.');
+      return;
+    }
 
-    router.replace('/home');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsPlacingOrder(true);
+
+    try {
+      // get asset index from hyperliquid metadata
+      const meta = await hyperliquidService.getMeta();
+      const coin = (symbol as string).replace('-USD', '');
+      const assetIndex = meta.universe.findIndex((asset: any) => asset.name === coin);
+      
+      if (assetIndex === -1) {
+        throw new Error(`Asset ${coin} not found`);
+      }
+
+      const price = parseFloat(currentPrice as string) || 0;
+      const amountNum = parseFloat(amount as string) || 0;
+      const leverageNum = parseInt(leverage as string) || 1;
+      const isLongPosition = isLong === 'true';
+      
+      // calculate size based on amount and price - this is the position size in base asset (BTC, ETH, etc.)
+      const positionSize = (amountNum * leverageNum) / price;
+      
+      // get asset metadata to determine proper size formatting
+      const assetMeta = meta.universe[assetIndex];
+      const szDecimals = assetMeta.szDecimals || 5;
+      
+      // format size to proper decimals and ensure minimum order value ($10)
+      const formattedSize = positionSize.toFixed(szDecimals);
+      const orderValue = positionSize * price;
+      
+      if (orderValue < 10) {
+        throw new Error(`Order value $${orderValue.toFixed(2)} is below minimum $10 requirement`);
+      }
+      
+      console.log(`[Order] ${coin} size calculation: $${amountNum} * ${leverageNum}x / $${price.toLocaleString()} = ${formattedSize} ${coin} (value: $${orderValue.toFixed(2)})`);
+      
+      const size = formattedSize;
+
+      // get exact current market price from hyperliquid sdk
+      const priceData = await hyperliquidService.getCurrentPrice(symbol as string);
+      const currentMarketPrice = priceData.price;
+      
+      // check if provided price is within acceptable range (5% of market price)
+      const priceDiff = Math.abs(price - currentMarketPrice) / currentMarketPrice;
+      const useMarketOrder = priceDiff > 0.05; // if more than 5% away, use market order
+      
+      console.log(`[Order] ${coin} - Input: $${price.toLocaleString()}, Market: $${currentMarketPrice.toLocaleString()}, Diff: ${(priceDiff * 100).toFixed(2)}%, Using ${useMarketOrder ? 'market' : 'limit'} order`);
+
+      const isReduceMode = isReducePosition === 'true';
+      
+      const orderType = useMarketOrder ? 'market' as const : 'limit' as const;
+      
+      const orderParams = {
+        coin,
+        isBuy: isLongPosition,
+        size: size.toString(),
+        price: useMarketOrder ? currentMarketPrice.toString() : price.toString(),
+        orderType,
+        reduceOnly: isReduceMode, // set reduce-only for reduce position mode
+        postOnly: false,
+      };
+
+      console.log('placing order:', orderParams);
+
+      const result = await signAndPlaceOrder(orderParams);
+
+      if (result.status === 'ok') {
+        const isAddMode = isAddToPosition === 'true';
+        const isReduceMode = isReducePosition === 'true';
+        
+        let successMessage = '';
+        if (isAddMode) {
+          successMessage = `Successfully added to your ${isLongPosition ? 'long' : 'short'} position for ${coin}`;
+        } else if (isReduceMode) {
+          successMessage = `Successfully reduced your position for ${coin}`;
+        } else {
+          successMessage = `Successfully placed ${useMarketOrder ? 'market' : 'limit'} ${isLongPosition ? 'long' : 'short'} order for ${coin}`;
+        }
+        
+        Alert.alert(
+          'Order Placed',
+          successMessage,
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/home')
+            }
+          ]
+        );
+      } else {
+        throw new Error(result.response || 'Order failed');
+      }
+    } catch (error) {
+      console.error('order placement failed:', error);
+      Alert.alert(
+        'Order Failed',
+        error instanceof Error ? error.message : 'Failed to place order. Please try again.',
+        [
+          {
+            text: 'OK',
+            style: 'default'
+          }
+        ]
+      );
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   const price = parseFloat(currentPrice as string) || 4460.1;
@@ -154,13 +270,23 @@ export default function ReviewOrderScreen() {
       {/* Open Position Button */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={styles.openButton}
+          style={[styles.openButton, isPlacingOrder && { opacity: 0.6 }]}
           onPress={handleOpenPosition}
+          disabled={isPlacingOrder}
           activeOpacity={0.8}
         >
-          <Text style={styles.openButtonText}>
-            Open {isLongPosition ? 'Long' : 'Short'}
-          </Text>
+          {isPlacingOrder ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={colors.text.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.openButtonText}>
+                Placing Order...
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.openButtonText}>
+              Open {isLongPosition ? 'Long' : 'Short'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

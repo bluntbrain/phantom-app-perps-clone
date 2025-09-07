@@ -63,7 +63,7 @@ export class HyperliquidService {
   }
 
   // fetch perpetuals metadata and universe
-  private async getMeta(): Promise<MetaResponse> {
+  public async getMeta(): Promise<MetaResponse> {
     return await this.apiCall({ type: 'meta' });
   }
 
@@ -210,28 +210,6 @@ export class HyperliquidService {
     }
   }
 
-  // get price
-  public async getCurrentPrice(coin: string): Promise<number> {
-    try {
-      // get contexts with prices
-      const [, assetCtxs] = await this.getMetaAndAssetCtxs();
-      const meta = await this.getMeta();
-      // find asset
-      const assetIndex = meta.universe.findIndex(asset => asset.name === coin);
-      if (assetIndex === -1) {
-        throw new Error(`Asset ${coin} not found`);
-      }
-
-      const assetCtx = assetCtxs[assetIndex];
-      if (!assetCtx) {
-        throw new Error(`Price data for ${coin} not available`);
-      }      const price = parseFloat(assetCtx.markPx);
-      return price;
-    } catch (error) {
-      console.error('failed to fetch price:', coin, error);
-      return 0;
-    }
-  }
 
   // fetch candle history
   public async getCandleSnapshot(coin: string, interval: string, startTime?: number, endTime?: number): Promise<CandleData[]> {
@@ -759,6 +737,148 @@ export class HyperliquidService {
       return result;
     } catch (error) {
       console.error('[Order] Failed:', orderParams, error);
+      throw error;
+    }
+  }
+
+  // cancel order using sdk
+  public async cancelOrder(asset: number, orderId: number): Promise<any> {
+    try {
+      const result = await hyperliquidSDKService.cancelOrder({
+        asset,
+        orderId
+      });
+      
+      console.log('cancel order completed:', { asset, orderId }, result);
+      return result;
+    } catch (error) {
+      console.error('cancel order failed:', { asset, orderId }, error);
+      throw error;
+    }
+  }
+
+  // modify order using sdk - requires full order parameters
+  public async modifyOrder(params: {
+    orderId: number;
+    asset: number;
+    isBuy: boolean;
+    price: string;
+    size: string;
+    reduceOnly?: boolean;
+    orderType: 'limit' | 'market';
+    postOnly?: boolean;
+  }): Promise<any> {
+    try {
+      const result = await hyperliquidSDKService.modifyOrder(params);
+      
+      console.log('modify order completed:', params, result);
+      return result;
+    } catch (error) {
+      console.error('modify order failed:', params, error);
+      throw error;
+    }
+  }
+
+  // update leverage using sdk
+  public async updateLeverage(asset: number, isCross: boolean, leverage: number): Promise<any> {
+    try {
+      const result = await hyperliquidSDKService.updateLeverage({
+        asset,
+        isCross,
+        leverage
+      });
+      
+      console.log('update leverage completed:', { asset, isCross, leverage }, result);
+      return result;
+    } catch (error) {
+      console.error('update leverage failed:', { asset, isCross, leverage }, error);
+      throw error;
+    }
+  }
+
+  // get exact current price for a specific asset using hyperliquid sdk
+  public async getCurrentPrice(coinSymbol: string): Promise<{
+    price: number;
+    markPrice: number;
+    midPrice: number;
+    change24h: number;
+    changePercent24h: number;
+  }> {
+    try {
+      const meta = await this.getMeta();
+      const [, assetCtxs] = await this.getMetaAndAssetCtxs();
+      
+      const coin = coinSymbol.replace('-USD', '');
+      const assetIndex = meta.universe.findIndex(asset => asset.name === coin);
+      
+      if (assetIndex === -1) {
+        throw new Error(`Asset ${coin} not found in Hyperliquid universe`);
+      }
+      
+      if (!assetCtxs[assetIndex]) {
+        throw new Error(`No price context available for ${coin}`);
+      }
+      
+      const ctx = assetCtxs[assetIndex];
+      const markPrice = parseFloat(ctx.markPx || '0');
+      const midPrice = parseFloat(ctx.midPx || '0');
+      const prevDayPrice = parseFloat(ctx.prevDayPx || '0');
+      
+      if (markPrice === 0 && midPrice === 0) {
+        throw new Error(`No valid price data available for ${coin}`);
+      }
+      
+      const currentPrice = markPrice || midPrice;
+      const change24h = currentPrice - prevDayPrice;
+      const changePercent24h = prevDayPrice > 0 ? (change24h / prevDayPrice) * 100 : 0;
+      
+      console.log(`[getCurrentPrice] ${coin}: $${currentPrice.toLocaleString()} (${changePercent24h >= 0 ? '+' : ''}${changePercent24h.toFixed(2)}%)`);
+      
+      return {
+        price: currentPrice,
+        markPrice,
+        midPrice,
+        change24h,
+        changePercent24h
+      };
+    } catch (error) {
+      console.error(`get current price failed for ${coinSymbol}:`, error);
+      throw error;
+    }
+  }
+
+  // retrieve user's perpetuals account summary
+  public async getUserPerpAccountSummary(userAddress: string, dex?: string): Promise<any> {
+    try {
+      const requestBody = {
+        type: 'clearinghouseState',
+        user: userAddress,
+        ...(dex && { dex })
+      };
+
+      const result = await this.apiCall(requestBody);
+      console.log('get user perp account summary completed:', { userAddress, dex }, result);
+      return result;
+    } catch (error) {
+      console.error('get user perp account summary failed:', { userAddress, dex }, error);
+      throw error;
+    }
+  }
+
+  // retrieve user's open orders with frontend info
+  public async getUserOpenOrders(userAddress: string, dex?: string): Promise<any> {
+    try {
+      const requestBody = {
+        type: 'frontendOpenOrders',
+        user: userAddress,
+        ...(dex && { dex })
+      };
+
+      const result = await this.apiCall(requestBody);
+      console.log('get user open orders completed:', { userAddress, dex }, result);
+      return result;
+    } catch (error) {
+      console.error('get user open orders failed:', { userAddress, dex }, error);
       throw error;
     }
   }
