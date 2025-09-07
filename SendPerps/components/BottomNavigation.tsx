@@ -5,9 +5,10 @@ import { router, usePathname } from "expo-router";
 import { colors } from "../constants/colors";
 import { spacing } from "../constants/spacing";
 import { haptics } from "../utils/haptics";
+import Toast from "react-native-toast-message";
 
 interface BottomNavigationProps {
-  activeTab?: "home" | "perp" | "history" | "search";
+  activeTab?: "home" | "perp" | "portfolio" | "notifications";
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
@@ -19,7 +20,6 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   const getActiveTab = () => {
     if (activeTab) return activeTab;
     if (pathname.includes("perp")) return "perp";
-    if (pathname.includes("history")) return "history";
     if (pathname.includes("home") || pathname === "/") return "home";
     return "home";
   };
@@ -36,12 +36,19 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       case "perp":
         router.push("/perp");
         break;
-      case "history":
-        router.push("/history");
+      case "portfolio":
+        Toast.show({
+          type: "info",
+          text1: "Coming Soon",
+          text2: "Portfolio feature will be available in a future update.",
+        });
         break;
-      case "search":
-        // Navigate to search or show search modal
-        console.log("Search pressed");
+      case "notifications":
+        Toast.show({
+          type: "info",
+          text1: "Coming Soon",
+          text2: "Notifications feature will be available in a future update.",
+        });
         break;
     }
   };
@@ -69,21 +76,21 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       <TouchableOpacity
         style={[
           styles.tabItem,
-          currentTab === "history" && styles.tabItemActive,
+          currentTab === "portfolio" && styles.tabItemActive,
         ]}
-        onPress={() => handleTabPress("history")}
+        onPress={() => handleTabPress("portfolio")}
       >
-        <Feather name="clock" size={24} color={getIconColor("history")} />
+        <Feather name="pie-chart" size={24} color={getIconColor("portfolio")} />
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[
           styles.tabItem,
-          currentTab === "search" && styles.tabItemActive,
+          currentTab === "notifications" && styles.tabItemActive,
         ]}
-        onPress={() => handleTabPress("search")}
+        onPress={() => handleTabPress("notifications")}
       >
-        <Feather name="search" size={24} color={getIconColor("search")} />
+        <Feather name="bell" size={24} color={getIconColor("notifications")} />
       </TouchableOpacity>
     </View>
   );

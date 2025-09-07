@@ -9,12 +9,11 @@ export function useSolanaPrice() {
     const fetchSolPrice = async () => {
       try {
         setLoading(true);
-        const currentPrice = await hyperliquidService.getCurrentPrice('SOL');
+        const priceData = await hyperliquidService.getCurrentPrice('SOL-USD');
+        const currentPrice = priceData.price;
         setPrice(currentPrice);
       } catch (error) {
-        console.error('Failed to fetch SOL price:', error);
-        // Fallback to reasonable default
-        setPrice(150.0);
+        console.error('[useSolanaPrice] Failed to fetch SOL price:', error);
       } finally {
         setLoading(false);
       }

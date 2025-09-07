@@ -126,8 +126,7 @@ export const addfundsStyles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   addFundsButton: {
-    backgroundColor: colors.accent.orange,
-    paddingVertical: spacing.lg,
+    backgroundColor: colors.accent.purple,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.lg,
     alignItems: "center",
@@ -140,6 +139,7 @@ export const addfundsStyles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+    height: 56,
   },
   addFundsButtonDisabled: {
     backgroundColor: colors.background.secondary,
@@ -148,7 +148,7 @@ export const addfundsStyles = StyleSheet.create({
   },
   addFundsButtonText: {
     color: colors.background.primary,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     fontWeight: "600",
   },
   feeEstimateContainer: {

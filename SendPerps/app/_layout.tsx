@@ -7,8 +7,8 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
-import Toast from 'react-native-toast-message';
-import { toastConfig } from '../utils/toastConfig';
+import Toast from "react-native-toast-message";
+import { toastConfig } from "../utils/toastConfig";
 
 import PrivyWrapper from "../contexts/PrivyProvider";
 
@@ -26,7 +26,13 @@ export default function RootLayout() {
 
   return (
     <PrivyWrapper>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "slide_from_right",
+          animationDuration: 10,
+        }}
+      >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="splash" />
         <Stack.Screen name="home" />
@@ -38,11 +44,7 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="light" />
-      <Toast 
-        config={toastConfig}
-        position="top"
-        topOffset={60}
-      />
+      <Toast config={toastConfig} position="top" topOffset={60} />
     </PrivyWrapper>
   );
 }
