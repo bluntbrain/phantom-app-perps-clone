@@ -2,6 +2,10 @@
 
 A React Native trading application for Hyperliquid perpetual futures with Privy wallet authentication.
 
+
+https://github.com/user-attachments/assets/b1970535-4acc-4c6e-84d4-2ad3f5482e58
+
+
 ## Prerequisites
 
 - Node.js 18+
