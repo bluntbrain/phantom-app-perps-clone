@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { colors } from '../constants/colors';
-import { spacing, borderRadius, fontSize } from '../constants/spacing';
-import { haptics } from '../utils/haptics';
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { colors } from "../constants/colors";
+import { spacing, borderRadius, fontSize } from "../constants/spacing";
+import { haptics } from "../utils/haptics";
 
 interface PerpsCardProps {
   rank: number;
@@ -35,15 +35,15 @@ export const PerpsCard: React.FC<PerpsCardProps> = ({
       case 3:
         return { backgroundColor: colors.ranking.third };
       default:
-        return { backgroundColor: colors.background.tertiary };
+        return {};
     }
   };
 
   const getCryptoColor = () => {
-    if (symbol.includes('ETH')) return colors.crypto.ethereum;
-    if (symbol.includes('BTC')) return colors.crypto.bitcoin;
-    if (symbol.includes('SOL')) return colors.crypto.solana;
-    if (symbol.includes('XRP')) return colors.crypto.ripple;
+    if (symbol.includes("ETH")) return colors.crypto.ethereum;
+    if (symbol.includes("BTC")) return colors.crypto.bitcoin;
+    if (symbol.includes("SOL")) return colors.crypto.solana;
+    if (symbol.includes("XRP")) return colors.crypto.ripple;
     return colors.crypto.others;
   };
 
@@ -70,7 +70,9 @@ export const PerpsCard: React.FC<PerpsCardProps> = ({
             />
           )}
           <View style={styles.leverageIndicator}>
-            <Text style={styles.leverageText}>∞</Text>
+            <Text style={[styles.leverageText, { color: colors.text.black }]}>
+              ∞
+            </Text>
           </View>
         </View>
 
@@ -89,9 +91,9 @@ export const PerpsCard: React.FC<PerpsCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     backgroundColor: colors.background.primary,
@@ -99,25 +101,25 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.primary,
   },
   leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   rankBadge: {
     width: 24,
     height: 24,
     borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: spacing.md,
   },
   rankText: {
-    color: colors.background.primary,
     fontSize: fontSize.sm,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+    color: colors.text.primary,
   },
   cryptoIcon: {
-    position: 'relative',
+    position: "relative",
     marginRight: spacing.md,
   },
   icon: {
@@ -131,22 +133,22 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
   leverageIndicator: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -2,
     right: -2,
-    width: 16,
-    height: 16,
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 20,
+    height: 20,
+    backgroundColor: colors.text.primary,
+    borderRadius: borderRadius.sm,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
     borderColor: colors.background.primary,
   },
   leverageText: {
     color: colors.text.secondary,
     fontSize: fontSize.xs,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   tokenInfo: {
     flex: 1,
@@ -154,15 +156,15 @@ const styles = StyleSheet.create({
   symbolText: {
     color: colors.text.primary,
     fontSize: fontSize.md,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 2,
   },
   rightSection: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   volumeText: {
     color: colors.text.secondary,
     fontSize: fontSize.md,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

@@ -54,10 +54,7 @@ export default function HomeScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        refetchBalance(),
-        refetchPerpData()
-      ]);
+      await Promise.all([refetchBalance(), refetchPerpData()]);
     } catch (error) {
       console.error("Refresh error:", error);
     } finally {
@@ -93,59 +90,6 @@ export default function HomeScreen() {
       await logout();
     } catch (error) {
       console.error("Logout error:", error);
-    }
-  };
-
-  const _handleTransferToPerp = async () => {
-    if (!spotBalance || spotBalance <= 0) {
-      console.log("No funds available to transfer");
-      return;
-    }
-
-    if (!signingReady) {
-      console.log("Wallet not ready, please wait for wallet to initialize");
-      return;
-    }
-
-    if (signingError) {
-      console.log("Wallet error:", signingError);
-      return;
-    }
-
-    try {
-      haptics.medium();
-
-      console.log("Initiating transfer to perp account");
-
-      // Use Privy address for transfer (where the balance actually exists)
-      // The signing will still use HyperUnit address internally
-      const result = await signAndTransfer(
-        spotBalance.toString(),
-        true,
-        address as string
-      );
-
-      if (result.status === "ok") {
-        console.log(
-          `Successfully transferred $${spotBalance.toFixed(2)} to perp account`
-        );
-      } else {
-        throw new Error(result.response || "Transfer failed");
-      }
-    } catch (error) {
-      console.error("Transfer error:", error);
-
-      let errorMessage = "Could not complete the transfer";
-      if (error instanceof Error) {
-        if (error.message.includes("Must deposit before performing actions")) {
-          errorMessage =
-            "You need to make an initial deposit to Hyperliquid first. Bridge funds from Ethereum mainnet to activate your account, then you can transfer between spot and perp.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      console.error("Transfer failed:", errorMessage);
     }
   };
 
@@ -205,7 +149,7 @@ export default function HomeScreen() {
           <>
             <View style={styles.balanceBreakdown}>
               <Text style={styles.balanceSubtext}>
-                Perps: ${balance.toFixed(2)} (${availableBalance.toFixed(2)} available) • Spot: ${spotBalance.toFixed(2)}
+                Perps: ${balance.toFixed(2)} • Spot: ${spotBalance.toFixed(2)}
               </Text>
             </View>
           </>
@@ -213,13 +157,13 @@ export default function HomeScreen() {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.text.accent}
             colors={[colors.text.accent]}
@@ -228,22 +172,22 @@ export default function HomeScreen() {
       >
         {/* Quick Actions */}
         <View style={styles.quickActions}>
+          <Text style={styles.sectionTitle}>Perps</Text>
           <TouchableOpacity
             style={styles.quickActionCard}
             onPress={() => router.push("/perp")}
           >
-            <Ionicons name="trending-up" size={24} color={colors.accent.purple} />
-            <Text style={styles.quickActionTitle}>Perpetuals</Text>
-            <Text style={styles.quickActionSubtitle}>Trade with leverage</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => router.push("/addfunds")}
-          >
-            <Ionicons name="add-circle" size={24} color={colors.accent.green} />
-            <Text style={styles.quickActionTitle}>Add Funds</Text>
-            <Text style={styles.quickActionSubtitle}>Bridge from Solana</Text>
+            <Ionicons
+              name="trending-up"
+              size={24}
+              color={colors.accent.purple}
+            />
+            <View>
+              <Text style={styles.quickActionTitle}>Trade Perps</Text>
+              <Text style={styles.quickActionSubtitle}>
+                ${availableBalance.toFixed(2)} available
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
 

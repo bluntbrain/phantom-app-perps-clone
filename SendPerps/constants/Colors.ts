@@ -1,7 +1,7 @@
 export const colors = {
   background: {
-    primary: '#000000',
-    secondary: '#1a1a1a',
+    primary: '#1f1f1f',
+    secondary: '#2b2b2b',
     tertiary: '#2a2a2a',
     card: '#1e1e1e',
   },
@@ -9,10 +9,11 @@ export const colors = {
     primary: '#ffffff',
     secondary: '#a0a0a0',
     tertiary: '#666666',
-    accent: '#8b5cf6',
+    accent: '#a399e3',
+    black: '#000000',
   },
   accent: {
-    purple: '#8b5cf6',
+    purple: '#a399e3',
     green: '#10b981',
     red: '#ef4444',
     orange: '#f59e0b',

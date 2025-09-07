@@ -33,7 +33,8 @@ export const homeStyles = StyleSheet.create({
   balanceContainer: {
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   balanceLabel: {
     color: colors.text.secondary,
@@ -47,7 +48,7 @@ export const homeStyles = StyleSheet.create({
   },
   balanceAmount: {
     color: colors.text.primary,
-    fontSize: fontSize.xxxl,
+    fontSize: 56,
     fontWeight: '600',
     fontFamily: 'monospace',
   },
@@ -57,9 +58,8 @@ export const homeStyles = StyleSheet.create({
     fontWeight: '500',
   },
   balanceSubtext: {
-    color: colors.text.secondary,
-    fontSize: fontSize.xs,
-    marginTop: spacing.xs,
+    color: colors.text.accent,
+    fontSize: fontSize.md,
   },
   balanceBreakdown: {
     marginTop: spacing.xs,
@@ -78,18 +78,25 @@ export const homeStyles = StyleSheet.create({
     textAlign: 'center',
   },
   quickActions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
-    gap: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+
+  },
+  sectionTitle: {
+    color: colors.text.primary,
+    fontSize: fontSize.xxl,
+    fontWeight: '600',
   },
   quickActionCard: {
     flex: 1,
     backgroundColor: colors.background.secondary,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    padding: spacing.md,
     alignItems: 'center',
     gap: spacing.sm,
+    flexDirection: 'row',
   },
   quickActionTitle: {
     color: colors.text.primary,

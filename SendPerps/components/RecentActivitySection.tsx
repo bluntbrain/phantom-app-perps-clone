@@ -1,14 +1,15 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
-import { router } from 'expo-router';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../constants/colors";
+import { router } from "expo-router";
+import { fontSize } from "@/constants/spacing";
 
 interface Position {
   position: {
@@ -21,7 +22,7 @@ interface Position {
     entryPx: string;
     leverage: {
       rawUsd: string;
-      type: 'isolated' | 'cross';
+      type: "isolated" | "cross";
       value: number;
     };
     liquidationPx: string;
@@ -53,16 +54,15 @@ interface RecentActivitySectionProps {
   onRefresh: () => void;
 }
 
-export function RecentActivitySection({ 
-  accountSummary, 
-  isLoading, 
-  error, 
-  onRefresh 
+export function RecentActivitySection({
+  accountSummary,
+  isLoading,
+  error,
+  onRefresh,
 }: RecentActivitySectionProps) {
-  
   const formatCurrency = (value: string) => {
     const num = parseFloat(value);
-    return num.toLocaleString('en-US', {
+    return num.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
@@ -72,7 +72,7 @@ export function RecentActivitySection({
     const num = parseFloat(pnl);
     const isPositive = num >= 0;
     return {
-      value: `${isPositive ? '+' : ''}$${Math.abs(num).toLocaleString('en-US', {
+      value: `${isPositive ? "+" : ""}$${Math.abs(num).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`,
@@ -86,11 +86,11 @@ export function RecentActivitySection({
     const isLong = parseFloat(position.szi) > 0;
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.positionItem}
         onPress={() => {
           router.push({
-            pathname: '/trading',
+            pathname: "/trading",
             params: {
               symbol: position.coin,
               name: position.coin,
@@ -102,12 +102,18 @@ export function RecentActivitySection({
         <View style={styles.positionHeader}>
           <View style={styles.positionInfo}>
             <Text style={styles.positionCoin}>{position.coin}</Text>
-            <View style={[
-              styles.positionTypeIndicator,
-              { backgroundColor: isLong ? colors.accent.green : colors.accent.red }
-            ]}>
+            <View
+              style={[
+                styles.positionTypeIndicator,
+                {
+                  backgroundColor: isLong
+                    ? colors.accent.green
+                    : colors.accent.red,
+                },
+              ]}
+            >
               <Text style={styles.positionTypeText}>
-                {isLong ? 'LONG' : 'SHORT'} {position.leverage.value}x
+                {isLong ? "LONG" : "SHORT"} {position.leverage.value}x
               </Text>
             </View>
           </View>
@@ -115,7 +121,7 @@ export function RecentActivitySection({
             {pnl.value}
           </Text>
         </View>
-        
+
         <View style={styles.positionDetails}>
           <View style={styles.positionDetailItem}>
             <Text style={styles.positionDetailLabel}>Entry</Text>
@@ -142,7 +148,7 @@ export function RecentActivitySection({
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.positionFooter}>
           <Text style={styles.marginUsed}>
             Margin: ${formatCurrency(position.marginUsed)}
@@ -163,7 +169,11 @@ export function RecentActivitySection({
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Positions & Activity</Text>
           <TouchableOpacity onPress={onRefresh}>
-            <Ionicons name="refresh-outline" size={20} color={colors.text.accent} />
+            <Ionicons
+              name="refresh-outline"
+              size={20}
+              color={colors.text.accent}
+            />
           </TouchableOpacity>
         </View>
         <View style={styles.errorContainer}>
@@ -181,10 +191,14 @@ export function RecentActivitySection({
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Positions & Activity</Text>
         <TouchableOpacity onPress={onRefresh}>
-          <Ionicons name="refresh-outline" size={20} color={colors.text.accent} />
+          <Ionicons
+            name="refresh-outline"
+            size={20}
+            color={colors.text.accent}
+          />
         </TouchableOpacity>
       </View>
-      
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={colors.text.accent} />
@@ -192,9 +206,15 @@ export function RecentActivitySection({
         </View>
       ) : !accountSummary || accountSummary.assetPositions.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="bar-chart-outline" size={48} color={colors.text.secondary} />
+          <Ionicons
+            name="bar-chart-outline"
+            size={48}
+            color={colors.text.secondary}
+          />
           <Text style={styles.emptyText}>No active positions</Text>
-          <Text style={styles.emptySubtext}>Your trading activity will appear here</Text>
+          <Text style={styles.emptySubtext}>
+            Your trading activity will appear here
+          </Text>
         </View>
       ) : (
         <>
@@ -239,19 +259,19 @@ const styles = {
     marginBottom: 24,
   },
   sectionHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600' as const,
+    fontSize: fontSize.xxl,
+    fontWeight: "600" as const,
     color: colors.text.primary,
   },
   loadingContainer: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingVertical: 20,
   },
   loadingText: {
@@ -261,7 +281,7 @@ const styles = {
   },
   errorContainer: {
     padding: 20,
-    alignItems: 'center' as const,
+    alignItems: "center" as const,
   },
   errorText: {
     color: colors.accent.red,
@@ -277,16 +297,16 @@ const styles = {
   retryButtonText: {
     color: colors.text.accent,
     fontSize: 14,
-    fontWeight: '500' as const,
+    fontWeight: "500" as const,
   },
   emptyContainer: {
-    alignItems: 'center' as const,
+    alignItems: "center" as const,
     paddingVertical: 32,
   },
   emptyText: {
     color: colors.text.primary,
     fontSize: 16,
-    fontWeight: '500' as const,
+    fontWeight: "500" as const,
     marginTop: 12,
   },
   emptySubtext: {
@@ -301,9 +321,9 @@ const styles = {
     marginBottom: 16,
   },
   summaryRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     paddingVertical: 8,
   },
   summaryLabel: {
@@ -313,7 +333,7 @@ const styles = {
   summaryValue: {
     color: colors.text.primary,
     fontSize: 14,
-    fontWeight: '500' as const,
+    fontWeight: "500" as const,
   },
   positionItem: {
     backgroundColor: colors.background.secondary,
@@ -322,18 +342,18 @@ const styles = {
     marginBottom: 12,
   },
   positionHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     marginBottom: 12,
   },
   positionInfo: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
   },
   positionCoin: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
     color: colors.text.primary,
     marginRight: 8,
   },
@@ -345,19 +365,19 @@ const styles = {
   positionTypeText: {
     color: colors.text.primary,
     fontSize: 10,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   pnlValue: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   positionDetails: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
     marginBottom: 12,
   },
   positionDetailItem: {
-    alignItems: 'center' as const,
+    alignItems: "center" as const,
     flex: 1,
   },
   positionDetailLabel: {
@@ -368,24 +388,24 @@ const styles = {
   positionDetailValue: {
     color: colors.text.primary,
     fontSize: 13,
-    fontWeight: '500' as const,
+    fontWeight: "500" as const,
   },
   positionFooter: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   marginUsed: {
     color: colors.text.secondary,
     fontSize: 12,
   },
   leverageInfo: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
   },
   leverageText: {
     color: colors.text.secondary,
     fontSize: 12,
-    fontWeight: '500' as const,
+    fontWeight: "500" as const,
   },
 };

@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { usePrivy } from "@privy-io/expo";
-import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../constants/colors";
 import { haptics } from "../utils/haptics";
 import { PerpsCard } from "../components/PerpsCard";
@@ -43,7 +42,9 @@ export default function PerpScreen() {
   const [perpsData, setPerpsData] = useState<PerpsData[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [addFundsVisible, setAddFundsVisible] = useState(false);
-  const [addFundsMode, setAddFundsMode] = useState<"transfer" | "swap">("transfer");
+  const [addFundsMode, setAddFundsMode] = useState<"transfer" | "swap">(
+    "transfer"
+  );
 
   React.useEffect(() => {
     const loadRealData = async () => {
@@ -89,7 +90,7 @@ export default function PerpScreen() {
     } else {
       setAddFundsMode("swap");
     }
-    
+
     setAddFundsVisible(true);
   };
 
@@ -100,7 +101,10 @@ export default function PerpScreen() {
     // withdraw not implemented yet
   };
 
-  const handleAddFundsConfirm = async (amount: string, mode: "transfer" | "swap") => {
+  const handleAddFundsConfirm = async (
+    amount: string,
+    mode: "transfer" | "swap"
+  ) => {
     console.log("[handleAddFundsConfirm] ====================");
     console.log("[handleAddFundsConfirm] Starting confirmation process");
     console.log("[handleAddFundsConfirm] Amount:", amount, "Mode:", mode);
@@ -110,7 +114,10 @@ export default function PerpScreen() {
     const numAmount = parseFloat(amount);
     if (numAmount <= 0) {
       console.error("[Validation Error] Invalid amount:", numAmount);
-      Alert.alert("Invalid Amount", "Please enter a valid amount greater than 0");
+      Alert.alert(
+        "Invalid Amount",
+        "Please enter a valid amount greater than 0"
+      );
       return;
     }
 
@@ -128,7 +135,10 @@ export default function PerpScreen() {
 
     if (!address) {
       console.error("[Address Error] No wallet address available");
-      Alert.alert("Address Error", "No wallet address available. Please connect your wallet.");
+      Alert.alert(
+        "Address Error",
+        "No wallet address available. Please connect your wallet."
+      );
       return;
     }
 
@@ -139,16 +149,27 @@ export default function PerpScreen() {
         try {
           await performDirectTransfer(numAmount);
         } catch (transferError) {
-          if (transferError instanceof Error && transferError.message.includes("Insufficient USDC")) {
-            const { hyperliquidService } = await import("../services/HyperliquidService");
-            const spotBalances = await hyperliquidService.getSpotBalance(address || "");
-            const usolBalance = spotBalances.find(balance => balance.coin === "USOL");
+          if (
+            transferError instanceof Error &&
+            transferError.message.includes("Insufficient USDC")
+          ) {
+            const { hyperliquidService } = await import(
+              "../services/HyperliquidService"
+            );
+            const spotBalances = await hyperliquidService.getSpotBalance(
+              address || ""
+            );
+            const usolBalance = spotBalances.find(
+              (balance) => balance.coin === "USOL"
+            );
             const usolAmount = usolBalance ? parseFloat(usolBalance.total) : 0;
-            
+
             if (usolAmount > 0) {
               await performSwapAndTransfer(usolAmount, "USOL", true);
             } else {
-              throw new Error("Insufficient balance: No USDC or USOL available for transfer");
+              throw new Error(
+                "Insufficient balance: No USDC or USOL available for transfer"
+              );
             }
           } else {
             throw transferError;
@@ -157,18 +178,19 @@ export default function PerpScreen() {
       }
     } catch (error) {
       console.error("add funds failed:", error);
-      
+
       let userMessage = "Operation failed. Please try again.";
       if (error instanceof Error) {
         if (error.message.includes("Insufficient balance")) {
-          userMessage = "Insufficient balance: You need USDC or USOL in your spot wallet.";
+          userMessage =
+            "Insufficient balance: You need USDC or USOL in your spot wallet.";
         } else if (error.message.includes("Swap failed")) {
           userMessage = "Swap operation failed. Please try again.";
         } else if (error.message.includes("Transfer failed")) {
           userMessage = "Transfer operation failed. Please check your balance.";
         }
       }
-      
+
       Alert.alert("Operation Failed", userMessage);
     }
   };
@@ -183,9 +205,11 @@ export default function PerpScreen() {
         true,
         address || undefined
       );
-      
+
       if (result.status !== "ok") {
-        throw new Error(result.response || `Transfer failed with status: ${result.status}`);
+        throw new Error(
+          result.response || `Transfer failed with status: ${result.status}`
+        );
       }
     } catch (error) {
       console.error("direct transfer failed:", error);
@@ -198,13 +222,12 @@ export default function PerpScreen() {
     _tokenSymbol: string,
     isDirectSolAmount: boolean = false
   ) => {
-
     try {
       haptics.medium();
       setAddFundsVisible(false);
 
       const swapSymbol = "USOL/USDC";
-      
+
       const swapParams = {
         symbol: swapSymbol,
         isBuy: false,
@@ -216,19 +239,27 @@ export default function PerpScreen() {
       const swapResult = await signAndPlaceSpotOrder(swapParams);
 
       if (swapResult.status !== "ok") {
-        throw new Error(`Swap failed: ${swapResult.response || "Unknown error"}`);
+        throw new Error(
+          `Swap failed: ${swapResult.response || "Unknown error"}`
+        );
       }
-      
+
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
-      const { hyperliquidService } = await import("../services/HyperliquidService");
-      const updatedBalances = await hyperliquidService.getSpotBalance(address || "");
-      
-      const usdcBalance = updatedBalances.find(b => b.coin === "USDC");
+      const { hyperliquidService } = await import(
+        "../services/HyperliquidService"
+      );
+      const updatedBalances = await hyperliquidService.getSpotBalance(
+        address || ""
+      );
+
+      const usdcBalance = updatedBalances.find((b) => b.coin === "USDC");
       const usdcAmount = usdcBalance ? parseFloat(usdcBalance.total) : 0;
-      
+
       if (usdcAmount <= 0) {
-        throw new Error("No USDC available after swap. Please check the swap result.");
+        throw new Error(
+          "No USDC available after swap. Please check the swap result."
+        );
       }
 
       const transferResult = await signAndTransfer(
@@ -238,9 +269,10 @@ export default function PerpScreen() {
       );
 
       if (transferResult.status !== "ok") {
-        throw new Error(`Transfer failed: ${transferResult.response || "Unknown error"}`);
+        throw new Error(
+          `Transfer failed: ${transferResult.response || "Unknown error"}`
+        );
       }
-      
     } catch (error) {
       console.error("swap and transfer failed:", error);
       throw error;
@@ -265,12 +297,11 @@ export default function PerpScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Perpetuals</Text>
+        <Text style={styles.title}>Perps</Text>
       </View>
 
       {/* Perp Balance Display */}
       <View style={styles.balanceContainer}>
-        <Text style={styles.balanceLabel}>Perp Balance</Text>
         <View style={styles.balanceRow}>
           {balanceLoading ? (
             <ActivityIndicator size="small" color={colors.text.accent} />
@@ -284,62 +315,33 @@ export default function PerpScreen() {
             </Text>
           )}
         </View>
-
+        <Text style={styles.balanceLabel}>
+          Available :{" "}
+          {balance.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </Text>
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleWithdraw}
           >
-            <Ionicons name="arrow-up" size={20} color={colors.text.primary} />
-            <Text style={styles.actionButtonText}>Withdraw</Text>
+            <Text
+              style={[styles.actionButtonText, { color: colors.text.primary }]}
+            >
+              Withdraw
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.actionButton, styles.addFundsButton]}
             onPress={handleAddFunds}
           >
-            <Ionicons name="add" size={20} color={colors.text.primary} />
             <Text style={styles.actionButtonText}>Add Funds</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Filter Buttons */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            selectedFilter === "Volume" && styles.filterButtonActive,
-          ]}
-          onPress={() => handleFilterPress("Volume")}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              selectedFilter === "Volume" && styles.filterTextActive,
-            ]}
-          >
-            Volume
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            selectedFilter === "24h" && styles.filterButtonActive,
-          ]}
-          onPress={() => handleFilterPress("24h")}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              selectedFilter === "24h" && styles.filterTextActive,
-            ]}
-          >
-            24h
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Table Header */}
